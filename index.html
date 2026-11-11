@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>כוח העל שלנו</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@600&family=Rubik:wght@500;600&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="stage" class="stage">
+
+    <!-- הסצנה כולה: SVG אחד בקואורדינטות הבמה 1440×1024. השכבות נבנות ב-main.js מתוך figma-parts.js -->
+    <svg id="scene" class="scene" viewBox="0 0 1440 1024" aria-hidden="true">
+      <defs id="scene-defs"></defs>
+    </svg>
+
+    <!-- מרקם משותף: גרעיניות של הדפס על נייר מעל כל הסצנה -->
+    <svg class="grain" aria-hidden="true" width="1440" height="1024">
+      <filter id="paper-grain" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" stitchTiles="stitch" result="noise" />
+        <feColorMatrix in="noise" type="matrix" result="speckle"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2 0 0 0 -0.8" />
+        <feFlood class="grain-ink" result="ink" />
+        <feComposite in="ink" in2="speckle" operator="in" />
+      </filter>
+      <rect width="100%" height="100%" filter="url(#paper-grain)" />
+    </svg>
+
+    <!-- מסגור: הטקסט מגיע מ-content.js -->
+    <h1 id="headline" class="headline"></h1>
+    <div id="tags" class="tags"></div>
+    <p id="power" class="power" aria-live="polite"></p>
+    <button id="bookmark" class="bookmark" type="button"></button>
+
+    <!-- דמויות למקלדת ולקורא מסך: שכבה שקופה מעל כל דמות -->
+    <div id="hit" class="hit"></div>
+  </main>
+
+  <script src="content.js"></script>
+  <script src="figma-parts.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

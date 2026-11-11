@@ -46,7 +46,7 @@
   --motion-revert: 600ms;
   --motion-button-lift: 150ms;
   --motion-button-press: 80ms;
-  --motion-peek-interval: 6000ms;
+  --motion-peek-interval: 4000ms;  /* שיפור 11.11: היה 6000 */
   --motion-peek-first: 1500ms;    /* ההצצה הראשונה, אחר כך כל interval */
   --motion-world-hint-idle: 3000ms; /* רמז בתוך העולם: אחרי כמה זמן בלי תזוזת עכבר */
   --motion-ariel-flow: 4000ms;
@@ -99,7 +99,8 @@
   /* ===== ערכים מקומיים (אין להם משתנה ב-Figma) ===== */
   --brain-scale-hover: 1.06;     /* פעימת המוח (טבלת התנועה) */
   --brain-scale-press: 0.92;
-  --peek-hold: 600ms;            /* הצצה: פתיחה 300 → המתנה 600 → סגירה 300 */
+  --peek-hold: 1200ms;           /* הצצה: פתיחה 300 → המתנה 1200 → סגירה 300 (היה 600) */
+  --peek-hover-intent: 500ms;    /* hover קצר מזה לא עוצר את ההצצה */
   --char-scale-hover: 1.04;      /* hover: הדמות גדלה */
   --hole-rim: var(--color-bg-page);  /* שפת החור ושפת הנייר של המוח. בעולם: הקיר הבהיר של העולם (אין אפור בעולם) */
   --hole-scale-open: 1;         /* 11.11: החור והמוח מיוצאים מוריאנט ראש=פתוח, כבר בגודל ×1.3 */
@@ -412,7 +413,8 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
   transform-box: view-box;
   transition: scale var(--motion-hover-open) ease-out;
 }
-.char.is-hover { scale: var(--char-scale-hover); }
+/* ההצצה נראית בדיוק כמו hover (גדלה + המוח פועם), כך שהיא מלמדת מה יקרה כשמרחפים */
+.char:is(.is-hover, .is-peek) { scale: var(--char-scale-hover); }
 
 /* החור בראש: סגור במצב רגיל (ראש שלם), נפתח ב-hover / בהצצה / כשהעולם שלה פתוח */
 .hole {
@@ -443,7 +445,7 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
 }
 /* שיפור 11.11: כל הדמות לחיצה, ולכן המוח פועם כל עוד העכבר על הדמות (לא רק על המוח) —
    הפעימה היא ההזמנה ללחוץ. לחיצה בכל מקום על הדמות מועכת את המוח (משוב מיידי) */
-.char.is-hover .brain, .brain:hover { animation: brain-pulse var(--motion-brain-pulse) ease-in-out infinite; }
+.char:is(.is-hover, .is-peek) .brain, .brain:hover { animation: brain-pulse var(--motion-brain-pulse) ease-in-out infinite; }
 .char.is-press .brain, .brain:active { animation: none; scale: var(--brain-scale-press); }
 @keyframes brain-pulse {
   0%, 100% { scale: 1; }
@@ -725,5 +727,5 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
   .flow, .wind, .ripple, .flap, .hover-float, .brain:hover { animation: none !important; }
   /* הקרעים: רק fade */
   .u-tear, .world.is-open .u-tear, .world.is-closing .u-tear { animation: none !important; scale: 1; }
-  .char.is-hover { scale: 1; }
+  .char:is(.is-hover, .is-peek) { scale: 1; }
 }

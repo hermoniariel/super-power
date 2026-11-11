@@ -500,10 +500,14 @@ function setActive(nextId) {
 let hoverId = null;
 let hoveredOnce = false;
 
+// ההצצה נעצרת רק על כוונה: hover שנמשך --peek-hover-intent (או לחיצה, שפותחת עולם).
+// ריחוף מקרי (סמן שנח במרכז המסך ורועד בזמן הטעינה) כבר לא מבטל את הרמז לתמיד
+let hoverIntent = 0;
 function setHover(id) {
   if (id === hoverId) return;
   hoverId = id;
-  if (id) { hoveredOnce = true; stopPeek(); }
+  clearTimeout(hoverIntent);
+  if (id) hoverIntent = setTimeout(() => { hoveredOnce = true; stopPeek(); }, ms('--peek-hover-intent'));
   for (const [cid, c] of Object.entries(chars)) {
     for (const g of c.groups) g.classList.toggle('is-hover', cid === id);
   }
@@ -557,6 +561,7 @@ function playHint(id) {
 let peekFirst = 0;
 function peekOnce() {
   if (hoveredOnce || activeId) return stopPeek();
+  if (hoverId) return;   // העכבר כבר על דמות — לא מציצים במקביל
   const ids = Object.keys(chars);
   const c = chars[ids[Math.floor(Math.random() * ids.length)]];
   c.groups.forEach((g) => g.classList.add('is-peek'));

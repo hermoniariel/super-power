@@ -47,6 +47,8 @@
   --motion-button-lift: 150ms;
   --motion-button-press: 80ms;
   --motion-peek-interval: 6000ms;
+  --motion-peek-first: 1500ms;    /* ההצצה הראשונה, אחר כך כל interval */
+  --motion-world-hint-idle: 3000ms; /* רמז בתוך העולם: אחרי כמה זמן בלי תזוזת עכבר */
   --motion-ariel-flow: 4000ms;
   --motion-ariel-pull: 400ms;
   --motion-yael-wind: 2400ms;
@@ -99,7 +101,8 @@
   --brain-scale-press: 0.92;
   --peek-hold: 600ms;            /* הצצה: פתיחה 300 → המתנה 600 → סגירה 300 */
   --char-scale-hover: 1.04;      /* hover: הדמות גדלה */
-  --hole-scale-open: 1;          /* 11.11: החור והמוח מיוצאים מוריאנט ראש=פתוח, כבר בגודל ×1.3 */
+  --hole-rim: var(--color-bg-page);  /* שפת החור ושפת הנייר של המוח. בעולם: הקיר הבהיר של העולם (אין אפור בעולם) */
+  --hole-scale-open: 1;         /* 11.11: החור והמוח מיוצאים מוריאנט ראש=פתוח, כבר בגודל ×1.3 */
   --yael-grow: 900ms;            /* ענף צומח מהראש */
   --glow-fade: 400ms;            /* כיבוי רך של אור הפרח */
   --tear-crack: 120ms;           /* סדק דק */
@@ -131,7 +134,7 @@
 .scene feFlood { transition: flood-color var(--paint-dur, 600ms) var(--paint-ease, ease); }
 
 /* ===== מצבי העולם (סצנה · לפי עולם) ===== */
-.stage[data-mode="A"] {
+.stage[data-mode="A"], body[data-mode="A"] {
   --lib-wall: #fef7f5; --lib-case: #faedeb; --lib-case-shadow: #a86f631a; --lib-door: #f7e5e2;
   --lib-shelf-back: #f7e0dd; --lib-shelf-shade: #a86f631a;
   --lib-band-dark: #89221c; --lib-band-light: #fef7f5;
@@ -144,7 +147,7 @@
   --shadow-contact: rgba(88, 14, 22, .26); --shadow-ambient: rgba(88, 14, 22, .18);
   --shadow-inner: rgba(88, 14, 22, .24); --shadow-ink: rgb(88, 14, 22);
 }
-.stage[data-mode="B"] {
+.stage[data-mode="B"], body[data-mode="B"] {
   --lib-wall: #fff5e7; --lib-case: #fce8ca; --lib-case-shadow: #a9783f1a; --lib-door: #f9e1bc;
   --lib-shelf-back: #f8ddb5; --lib-shelf-shade: #a9783f1a;
   --lib-band-dark: #5f4106; --lib-band-light: #fff7ec;
@@ -157,7 +160,7 @@
   --shadow-contact: rgba(84, 52, 12, .26); --shadow-ambient: rgba(84, 52, 12, .18);
   --shadow-inner: rgba(84, 52, 12, .24); --shadow-ink: rgb(84, 52, 12);
 }
-.stage[data-mode="C"] {
+.stage[data-mode="C"], body[data-mode="C"] {
   --lib-wall: #f3f7ff; --lib-case: #e5edfc; --lib-case-shadow: #4a5e8f1a; --lib-door: #dee8fb;
   --lib-shelf-back: #d7e4f9; --lib-shelf-shade: #4a5e8f1a;
   --lib-band-dark: #223b6c; --lib-band-light: #f5f9fe;
@@ -213,6 +216,41 @@ html, body {
   color: var(--color-text-primary);
 }
 
+/* שיפור 11.11: השוליים סביב הבמה (במסך 16:9) הם המשך של הקיר — באותו צבע עולם, עם אותו
+   "אור על הקיר" (multiply, באותו גודל ומרכז כמו בבמה), כך שאין פסים אפורים ואין תפר.
+   body מקבל את אותו data-mode כמו הבמה (main.js › setActive) */
+@property --shadow-ink { syntax: '<color>'; inherits: true; initial-value: rgb(27, 24, 22); }
+body {
+  --s: var(--stage-scale, 1);
+  background-color: var(--lib-wall);
+  background-image: radial-gradient(
+    calc(763.2px * var(--s)) calc(617px * var(--s)) at 50% calc(50% - 10px * var(--s)),
+    color-mix(in srgb, var(--shadow-ink) 0%, transparent) 0%,
+    color-mix(in srgb, var(--shadow-ink) 3%, transparent) 55%,
+    color-mix(in srgb, var(--shadow-ink) 16%, transparent) 100%);
+  background-blend-mode: multiply;
+  transition: background-color var(--motion-takeover) var(--ease-open), --shadow-ink var(--motion-takeover) var(--ease-open);
+}
+/* אריאל: הגריד על הקיר ממשיך גם מחוץ לבמה, באותם קווים בדיוק (x = -9.8 + 33.9k, y = 66.8 + 33.9k) */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--motion-revert) var(--ease-close);
+  --g: calc(33.9px * var(--s));
+  --w: calc(1.1px * var(--s));
+  background-image:
+    linear-gradient(to right, var(--world-a-grid) var(--w), transparent var(--w)),
+    linear-gradient(to bottom, var(--world-a-grid) var(--w), transparent var(--w));
+  background-size: var(--g) var(--g);
+  background-position:
+    calc(50vw - 720px * var(--s) - 9.8px * var(--s)) 0,
+    0 calc(50vh - 512px * var(--s) + 66.8px * var(--s));
+}
+body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeover) var(--ease-open) calc(var(--motion-takeover-spread) / 2); }
+
 .stage {
   position: absolute;
   top: 50%;
@@ -230,6 +268,7 @@ html, body {
 .stage.has-world {
   --paint-dur: var(--motion-takeover);
   --paint-ease: var(--ease-open);
+  --hole-rim: var(--lib-wall);
 }
 
 .scene {
@@ -402,8 +441,10 @@ html, body {
   cursor: pointer;
   transition: scale var(--motion-press) ease-out;
 }
-.brain:hover { animation: brain-pulse var(--motion-brain-pulse) ease-in-out infinite; }
-.brain:active { scale: var(--brain-scale-press); animation-play-state: paused; }
+/* שיפור 11.11: כל הדמות לחיצה, ולכן המוח פועם כל עוד העכבר על הדמות (לא רק על המוח) —
+   הפעימה היא ההזמנה ללחוץ. לחיצה בכל מקום על הדמות מועכת את המוח (משוב מיידי) */
+.char.is-hover .brain, .brain:hover { animation: brain-pulse var(--motion-brain-pulse) ease-in-out infinite; }
+.char.is-press .brain, .brain:active { animation: none; scale: var(--brain-scale-press); }
 @keyframes brain-pulse {
   0%, 100% { scale: 1; }
   50% { scale: var(--brain-scale-hover); }

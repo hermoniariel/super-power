@@ -465,10 +465,14 @@ function setActive(nextId) {
   activeId = nextId;
   if (opening) {
     stage.dataset.mode = nextId;
+    document.body.dataset.mode = nextId;   // השוליים סביב הבמה בצבע העולם
+    scheduleHint(nextId);
     document.getElementById('power').textContent = CONTENT.characters[nextId].power;
     stopPeek();
   } else {
     delete stage.dataset.mode;
+    delete document.body.dataset.mode;
+    cancelHint();
   }
   stage.classList.toggle('has-world', opening);
 
@@ -507,25 +511,72 @@ function setHover(id) {
 
 // רמז גילוי: ראש אקראי "מציץ" עד האינטראקציה הראשונה
 let peekTimer = 0;
+/* רמז בתוך העולם (שיפור 11.11): אם העכבר לא זז ~3 שניות אחרי שהעולם נפתח, המיקרו-אינטראקציה
+   של העולם מודגמת פעם אחת — אותו היגיון כמו ההצצה ב"לפני". תזוזת עכבר מבטלת. לא ב-reduced-motion */
+let hintTimer = 0;
+const HINT_CENTER = { x: 720, y: 330 };   // מרכז הספרייה: האלמנט הקרוב אליו הוא שמודגם
+function cancelHint() { clearTimeout(hintTimer); hintTimer = 0; }
+function scheduleHint(id) {
+  cancelHint();
+  if (reducedMotion) return;
+  const delay = ms('--motion-takeover') + ms('--motion-takeover-spread') + ms('--motion-world-hint-idle');
+  hintTimer = setTimeout(() => { if (activeId === id) playHint(id); }, delay);
+}
+function closestTo(list, point) {
+  let best = null;
+  let bestD = Infinity;
+  for (const item of list) {
+    const c = stageCenter(item);
+    const d = Math.hypot(c.x - point.x, c.y - point.y);
+    if (d < bestD) { best = item; bestD = d; }
+  }
+  return best && stageCenter(best);
+}
+function playHint(id) {
+  if (id === 'A') {
+    // צומת נמשך לכיוון "עכבר" דמיוני וחוזר בקפיץ
+    const c = closestTo(document.querySelectorAll('[data-part="aThreads"] [data-n^="צומת"]'), HINT_CENTER);
+    if (!c) return;
+    threads?.move(c.x + 30, c.y + 30);
+    setTimeout(() => { if (activeId === 'A') threads?.leave(); }, 700);
+  } else if (id === 'B') {
+    // פרח נדלק ונכבה
+    const c = closestTo(glows.map((g) => g.el), HINT_CENTER);
+    if (!c) return;
+    lightFlowers(c.x, c.y);
+    setTimeout(() => { if (activeId === 'B') lightFlowers(-999, -999); }, 1200);
+  } else if (id === 'C') {
+    // הכוכבים והספירלות ליד המרכז מסתובבים
+    const c = closestTo(decor.map((d) => d.ref), HINT_CENTER);
+    if (!c) return;
+    spinDecor(c.x, c.y);
+    setTimeout(() => { if (activeId === 'C') spinDecor(-9999, -9999); }, 700);
+  }
+}
+
+let peekFirst = 0;
+function peekOnce() {
+  if (hoveredOnce || activeId) return stopPeek();
+  const ids = Object.keys(chars);
+  const c = chars[ids[Math.floor(Math.random() * ids.length)]];
+  c.groups.forEach((g) => g.classList.add('is-peek'));
+  setTimeout(() => c.groups.forEach((g) => g.classList.remove('is-peek')),
+    ms('--motion-hover-open') + ms('--peek-hold'));
+}
+// ההצצה הראשונה כמעט מיד (שיפור 11.11): המסך לא עומד סטטי ברגע שבו מחליטים אם ברור מה עושים
 function startPeek() {
   if (reducedMotion) return;
-  peekTimer = setInterval(() => {
-    if (hoveredOnce || activeId) return stopPeek();
-    const ids = Object.keys(chars);
-    const c = chars[ids[Math.floor(Math.random() * ids.length)]];
-    c.groups.forEach((g) => g.classList.add('is-peek'));
-    setTimeout(() => c.groups.forEach((g) => g.classList.remove('is-peek')),
-      ms('--motion-hover-open') + ms('--peek-hold'));
-  }, ms('--motion-peek-interval'));
+  peekFirst = setTimeout(peekOnce, ms('--motion-peek-first'));
+  peekTimer = setInterval(peekOnce, ms('--motion-peek-interval'));
 }
-function stopPeek() { clearInterval(peekTimer); peekTimer = 0; }
+function stopPeek() { clearTimeout(peekFirst); clearInterval(peekTimer); peekTimer = 0; }
 
 /* ===== אריאל: החוטים נמתחים לכיוון העכבר ===== */
 let threads = null;
 function setupThreads() {
   const root = document.querySelector('[data-part="aThreads"]');
   if (!root) return;
-  const reach = 80;    // px: רדיוס הרגישות (טבלת התנועה)
+  const reach = 140;   // px: רדיוס הרגישות. שיפור 11.11: היה 80 — עכשיו קרוב לשאר העולמות (120–260)
   const pull = 24;     // px: משיכה מקסימלית
   const stiffness = 0.12;
   const damping = 0.78;
@@ -722,6 +773,7 @@ function stagePoint(event) {
 
 function bindEvents() {
   scene.addEventListener('pointermove', (event) => {
+    cancelHint();   // המשתמשת כבר חוקרת — אין צורך ברמז
     const c = event.target.closest('.char');
     setHover(c ? c.dataset.char : null);
     const { x, y } = stagePoint(event);
@@ -739,6 +791,15 @@ function bindEvents() {
 
   // לחיצה על כל הדמות (לא רק המוח) פותחת את העולם שלה; לחיצה עליה כשהעולם שלה פתוח סוגרת;
   // לחיצה על דמות אחרת כשעולם פתוח = מעבר ישיר. click מגיע רק אם הלחיצה והשחרור על אותה דמות
+  // משוב לחיצה: המוח נמעך מיד בלחיצה על כל חלק בדמות (גם על הידיים, שהן שכבה נפרדת)
+  const release = () => Object.values(chars).forEach((c) => c.groups.forEach((g) => g.classList.remove('is-press')));
+  scene.addEventListener('pointerdown', (event) => {
+    const c = event.target.closest('.char');
+    if (c) chars[c.dataset.char].groups.forEach((g) => g.classList.add('is-press'));
+  });
+  window.addEventListener('pointerup', release);
+  scene.addEventListener('pointerleave', release);
+
   scene.addEventListener('click', (event) => {
     const c = event.target.closest('.char');
     if (!c) return;
@@ -764,7 +825,8 @@ function bindEvents() {
 /* ===== התאמת הבמה לחלון ===== */
 function fitStage() {
   const scale = Math.min(window.innerWidth / stage.offsetWidth, window.innerHeight / stage.offsetHeight);
-  stage.style.setProperty('--stage-scale', scale);
+  // על השורש, כדי שגם השוליים (body: אור על הקיר והגריד) יתאימו לסקייל של הבמה
+  document.documentElement.style.setProperty('--stage-scale', scale);
 }
 
 function init() {

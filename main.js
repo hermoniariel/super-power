@@ -463,12 +463,14 @@ function setActive(nextId) {
   if (activeId) threads?.leave();
 
   activeId = nextId;
+  clearPeek();
   if (opening) {
     stage.dataset.mode = nextId;
     document.body.dataset.mode = nextId;   // השוליים סביב הבמה בצבע העולם
     scheduleHint(nextId);
     document.getElementById('power').textContent = CONTENT.characters[nextId].power;
-    stopPeek();
+    hoveredOnce = true;   // מעכשיו ההצצה חוזרת רק כשהעכבר idle
+    noteActivity();
   } else {
     delete stage.dataset.mode;
     delete document.body.dataset.mode;
@@ -507,13 +509,13 @@ function setHover(id) {
   if (id === hoverId) return;
   hoverId = id;
   clearTimeout(hoverIntent);
-  if (id) hoverIntent = setTimeout(() => { hoveredOnce = true; stopPeek(); }, ms('--peek-hover-intent'));
+  if (id) hoverIntent = setTimeout(() => { hoveredOnce = true; }, ms('--peek-hover-intent'));
   for (const [cid, c] of Object.entries(chars)) {
     for (const g of c.groups) g.classList.toggle('is-hover', cid === id);
   }
 }
 
-// רמז גילוי: ראש אקראי "מציץ" עד האינטראקציה הראשונה
+// רמז גילוי: ראש אקראי "מציץ" — בביקור הראשון, ואחר כך בכל פעם שהעכבר idle (ראו peekOnce)
 let peekTimer = 0;
 /* רמז בתוך העולם (שיפור 11.11): אם העכבר לא זז ~3 שניות אחרי שהעולם נפתח, המיקרו-אינטראקציה
    של העולם מודגמת פעם אחת — אותו היגיון כמו ההצצה ב"לפני". תזוזת עכבר מבטלת. לא ב-reduced-motion */
@@ -558,11 +560,17 @@ function playHint(id) {
   }
 }
 
+/* ההצצה חוזרת כשהעכבר idle (החלטה 11.11): בביקור הראשון היא רצה כרגיל; אחרי אינטראקציה אמיתית
+   (hover מכוון או פתיחת עולם) היא חוזרת רק אחרי --motion-peek-idle בלי תזוזה, ונעצרת ברגע שזזים.
+   בתוך עולם מציצות רק שתי הדמויות האחרות — "אפשר לעבור לעולם שלה". */
 let peekFirst = 0;
+let lastActivity = performance.now();
+function noteActivity() { lastActivity = performance.now(); }
+function clearPeek() { Object.values(chars).forEach((c) => c.groups.forEach((g) => g.classList.remove('is-peek'))); }
 function peekOnce() {
-  if (hoveredOnce || activeId) return stopPeek();
   if (hoverId) return;   // העכבר כבר על דמות — לא מציצים במקביל
-  const ids = Object.keys(chars);
+  if (hoveredOnce && performance.now() - lastActivity < ms('--motion-peek-idle')) return;
+  const ids = Object.keys(chars).filter((id) => id !== activeId);
   const c = chars[ids[Math.floor(Math.random() * ids.length)]];
   c.groups.forEach((g) => g.classList.add('is-peek'));
   setTimeout(() => c.groups.forEach((g) => g.classList.remove('is-peek')),
@@ -777,6 +785,9 @@ function stagePoint(event) {
 }
 
 function bindEvents() {
+  // כל תזוזה (גם בשוליים מחוץ לבמה), לחיצה או מקש = לא idle
+  for (const type of ['pointermove', 'pointerdown', 'keydown']) window.addEventListener(type, noteActivity, { passive: true });
+
   scene.addEventListener('pointermove', (event) => {
     cancelHint();   // המשתמשת כבר חוקרת — אין צורך ברמז
     const c = event.target.closest('.char');

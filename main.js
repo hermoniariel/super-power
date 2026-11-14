@@ -52,12 +52,12 @@ const WORLDS = {
     ],
   },
   C: {
-    // סדר השכבות כמו בספרייה ב-Figma: השעון, הסימנים, הקרעים. הארון התחתון (cTears) — ללא שינוי עד החלטה
+    // סדר השכבות כמו בספרייה ב-Figma: השעון, הסימנים, הקרעים.
+    // הארון התחתון: בלי קרעים, כמו בפיגמה (הקרע הישן מאחורי יעל הוסר 14.11)
     back: [
       { part: 'cClock', units: [[':scope', 'pop']] },
       { part: 'cDecor', units: [['[data-n="סימן"]', 'pop']] },
       { part: 'cTearsNew', units: [[':scope', 'rip']] },
-      { part: 'cTears', units: [['[data-n="חלון קרוע"]', 'tear']] },
     ],
   },
 };
@@ -86,12 +86,6 @@ const SCENE_DEFS = `
     <feComposite in2="SourceAlpha" operator="in" result="shade"/>
     <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shade"/></feMerge>
   </filter>
-  <!-- הארון התחתון של לינוי (cTears): ללא שינוי עד החלטה — המילוי הרדיאלי שלו כמו קודם -->
-  <radialGradient id="linoy-tear-grad">
-    <stop offset="0" style="stop-color: var(--linoy-tear-center)"/>
-    <stop offset="0.6" style="stop-color: var(--linoy-tear-mid)"/>
-    <stop offset="1" style="stop-color: var(--linoy-tear-edge-deep)"/>
-  </radialGradient>
   <!-- הקרעים של לינוי נפתחים מהראש שלה החוצה (main.js › markUnit 'rip') -->
   <clipPath id="linoy-rip"><circle class="rip-circle" cx="249" cy="590"/></clipPath>`;
 
@@ -279,7 +273,7 @@ const SHADOW_SCOPES = [
   '[data-part="library"] [data-n="ארון"]', '.lamp-before',
   '[data-part^="body"]', '[data-part^="hole"] [data-n="מוח"]', '[data-part^="hands"]', '[data-part="table"]',
   '[data-part="aDrawers"]', '[data-part="bWindows"]', '[data-part="bTulip"]', '[data-part^="bBranch"]',
-  '[data-part="cClock"]', '[data-part="cTears"]',
+  '[data-part="cClock"]',
 ];
 const SHADOW_SHAPES = 'path, rect, circle, ellipse, polygon';
 const SHADOW_OFFSET = { '[data-part^="hole"]': 1.3 };   // החור מוקטן ×1/1.3 ב-CSS: ההיסט על המסך נשאר 1px

@@ -1,12 +1,14 @@
 /* ===== כוח העל שלנו =====
    כל האיורים מגיעים מקובץ ה-Figma דרך figma-parts.js (SVG בקואורדינטות הבמה, צבעים כ-var(--...)).
    כל התזמונים והצבעים ב-:root שב-style.css, בשמות של Figma.
+   עדכון 14.11.26: מקור האמת הוא עמודים 04 (רכיבים) ו-05 (מסכים) בלבד.
 
    מפת שמות השכבות (Figma בעברית → תפקיד בקוד):
-   'קיר' קיר הספרייה · 'מנורה' המנורה הרגילה (רק בלפני) · 'חור בראש' החור · 'מוח' המוח
-   'חוט NN' חוט של אריאל ('רצועת נייר' + 'חוט') · 'צומת NN' צומת · 'מספור מדפים' · 'מגירת קטלוג'
-   'בועת ניתוח' · 'חלון אור' · 'ענף N' · 'אור פרח' · 'הילת מנורה' · 'מנורת צבעוני'
-   'חלון קרוע' · 'קרע N' · 'גלים' · 'ספר מעופף' ('ספר-ציפור' + 'מסלול') */
+   'קיר' קיר הספרייה · 'ארון' הספרייה עצמה · 'מנורה' המנורה הרגילה (רק בלפני) · 'חור בראש' החור · 'מוח' המוח
+   'חוט NN' חוט של אריאל ('רצועת נייר' + 'חוט', קו שבור דרך הצמתים) · 'צומת NN' צומת · 'מספור מדפים'
+   'מגירת קטלוג' · 'חלון אור' · 'ענף N' · 'לב פרח' · 'הילת מנורה' · 'מנורת צבעוני'
+   'לינוי · קרעים' ('שפת נייר קרועה' + 'חלל' + 'כוכבים' + 'ספר מעופף') · 'סימנים · רצועת נייר' (פיסת הנייר של כל סימן)
+   'כוכבים' / 'ספירלות' / 'שמשות' · 'ספר מעופף' ('ספר-ציפור' + 'מסלול') · 'חלון קרוע' (הארון התחתון של לינוי) */
 
 const F = window.FIGMA;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -23,28 +25,22 @@ const CHARACTERS = {
   C: { body: 'bodyC', hole: 'holeC', hands: 'handsC', boxX: 139, tagX: 181 },
 };
 const ORDER = ['C', 'B', 'A'];  // סדר השכבות כמו במסך 01
+const HINT_ORDER = ['A', 'B', 'C'];  // רמז לפעולה: אריאל, יעל, לינוי, וחוזר חלילה
 
 /* ===== העולמות: מה נכנס לאן, ואיך כל יחידה משתנה בהשתלטות =====
-   under = על הקיר מאחורי הארון · back = מעל הספרייה, מאחורי הדמויות · front = מעל הדמויות.
-   units: [בורר, סוג]. סוגים: fade · pop · tear (overshoot) · stretch · draw (הקו נמתח) · drawer · branch */
+   under = על הקיר מאחורי הארון · back = מעל הספרייה, מאחורי הדמויות.
+   (14.11: גם החוטים של אריאל מאחורי הדמויות — הם יוצאים מאחורי הראש שלה.)
+   units: [בורר, סוג]. סוגים: fade · pop · rip (קרע שנפתח מהראש) · stretch · draw (הקו נמתח) · drawer · branch */
 const WORLDS = {
   A: {
     under: [{ part: 'aGrid', units: [[':scope > *', 'fade']] }],
     back: [
       { part: 'aDrawers', units: [['[data-n="מגירת קטלוג"]', 'drawer']] },
-      { part: 'aLamp', units: [['path', 'draw'], ['text', 'fade']] },
-      { part: 'aAnalysis', units: [['rect', 'fade']] },   // רק מסגרות מקווקוות (הבועות נמחקו ב-Figma)
+      { part: 'aLamp', units: [[':scope > :not(text)', 'pop'], ['text', 'fade']] },
       { part: 'aDims', units: [[':scope > *', 'stretch']] },
-    ],
-    front: [
-      // "פאות · קווי בנייה" מאחורי החוטים: קווים מקווקווים ומשולשים שקופים
-      // עמוד 06: קבוצה אחת — "פאות · קווי בנייה" מאחורי החוטים, ואז החוטים (זיגזג), הצמתים והמספור
       {
         part: 'aThreads',
-        units: [
-          ['[data-n="קו בנייה"]', 'fade'], ['[data-n="פאה"]', 'fade'],
-          ['[data-n^="חוט "]', 'draw'], ['[data-n^="צומת"]', 'pop'], ['[data-n="מספור מדפים"] > g', 'fade'],
-        ],
+        units: [['[data-n^="חוט "]', 'draw'], ['[data-n^="צומת"]', 'pop'], ['[data-n="מספור מדפים"] > g', 'fade']],
       },
     ],
   },
@@ -56,144 +52,48 @@ const WORLDS = {
     ],
   },
   C: {
-    // סדר השכבות כמו בספרייה ב-Figma: השעון, הקרעים והספרים, ומעליהם הקרעים בארון —
-    // כך שקווי האסוציאציה נעלמים מתחת לשפת הקרע
+    // סדר השכבות כמו בספרייה ב-Figma: השעון, הסימנים, הקרעים. הארון התחתון (cTears) — ללא שינוי עד החלטה
     back: [
       { part: 'cClock', units: [[':scope', 'pop']] },
-      { part: 'cAssoc', units: [['[data-n^="גלים"]', 'draw'], [':scope > g:not([data-n^="גלים"])', 'fade']] },
-      ...[1, 2, 3, 4, 5].map((i) => ({ part: `cTear${i}`, units: [[':scope', 'tear']] })),
-      { part: 'cPlanet', units: [[':scope', 'pop']] },
-      ...[1, 2, 3, 4].map((i) => ({ part: `cBook${i}`, units: [[':scope', 'pop']] })),
+      { part: 'cDecor', units: [['[data-n="סימן"]', 'pop']] },
+      { part: 'cTearsNew', units: [[':scope', 'rip']] },
       { part: 'cTears', units: [['[data-n="חלון קרוע"]', 'tear']] },
     ],
   },
 };
 
-/* טקסט השרטוט של אריאל: במקום ה-placeholders שב-Figma, לפי הסדר, מתוך content.js.
-   box = [x, y, w, h] בבמה (מ-Figma) */
+/* טקסט בתוך העולם של אריאל: מתוך content.js, לפי הסדר.
+   aDims: מיקום מה-Figma (box = [x, y, w, h]); aThreads, aLamp: הטקסט כבר במקומו בייצוא, רק התוכן מ-content.js */
 const WORLD_TEXT = CONTENT.worlds.A;
 const TEXT_SPOTS = {
-  aThreads: [
-    { box: [1387.2, 268.3, 26, 32], size: 21.2, text: WORLD_TEXT.shelfNumbers[0] },
-    { box: [1382.9, 395.5, 30, 32], size: 21.2, text: WORLD_TEXT.shelfNumbers[1] },
-    { box: [1383, 522.7, 30, 32], size: 21.2, text: WORLD_TEXT.shelfNumbers[2] },
-  ],
+  aThreads: WORLD_TEXT.shelfNumbers.map((text) => ({ text })),
   aDims: [
     { box: [701.5, 188.5, 37, 23], size: 14.8, text: WORLD_TEXT.dimensions.width },
     { box: [18, 500.4, 22.3, 40.3], size: 14.8, text: WORLD_TEXT.dimensions.height, rotate: -90 },
   ],
-  aLamp: [{ box: [533.4, 796.6, 24, 21], size: 13.8, text: WORLD_TEXT.lampAngle }],
+  aLamp: [{ text: WORLD_TEXT.lampAngle }],
 };
-
-/* ===== עומק וצללים (עמוד 06, 8 סגנונות "ניסוי עומק/…") =====
-   כל סגנון = פילטר SVG אחד. [סוג, x, y, radius, משתנה]: d = צל חיצוני, i = צל פנימי.
-   radius של Figma = פעמיים stdDeviation. הצבע מ-var(--shadow-*), ולכן הצל עובר עם העולם */
-const FX = {
-  touch: [['d', 0, 2, 2, 'shadow-contact'], ['d', 0, 6, 10, 'shadow-ambient']],          // 1 · מגע
-  furniture: [['d', 0, 3, 4, 'shadow-contact'], ['d', 0, 18, 40, 'shadow-ambient']],     // 2 · רהיט
-  figure: [['d', 0, 4, 6, 'shadow-contact'], ['d', 0, 22, 44, 'shadow-ambient']],        // 3 · דמות
-  float: [['d', 0, 6, 8, 'shadow-contact'], ['d', 0, 30, 60, 'shadow-ambient']],         // 4 · מרחף
-  recess: [['i', 0, 18, 22, 'shadow-inner'], ['i', 0, -2, 6, 'shadow-contact']],         // שקע
-  panel: [['i', 0, 2, 0, 'shadow-highlight'], ['i', 0, -3, 0, 'shadow-inner'], ['d', 0, 1, 0, 'shadow-contact']], // פאנל
-  volume: [['i', 6, 6, 4, 'shadow-volume-light'], ['i', -9, -11, 3, 'shadow-inner']],   // נפח
-  book: [['d', -3, 0, 3, 'shadow-contact']],                                             // ספר
-  hole: [['i', 0, 23.4, 28.6, 'shadow-inner'], ['i', 0, -2.6, 7.8, 'shadow-contact']],  // "חור בראש" (שקע ×1.3)
-  // הקרעים של לינוי: שקע + הצל הפנימי של הקרע עצמו (0,10,16), והצל החיצוני הדק (0,2,3)
-  tear: [['i', 0, 18, 22, 'shadow-inner'], ['i', 0, -2, 6, 'shadow-contact'], ['i', 0, 10, 16, 'linoy-tear-inner']],
-  tearDrop: [['d', 0, 2, 3, 'linoy-tear-drop']],
-};
-
-function fxFilter(id, list, region) {
-  let body = '';
-  const drops = [];
-  const inners = [];
-  list.forEach(([kind, dx, dy, r, color], k) => {
-    const res = `${id}-${k}`;
-    const flood = `<feFlood style="flood-color: var(--${color})"/>`;
-    if (kind === 'd') {
-      body += `<feGaussianBlur in="SourceAlpha" stdDeviation="${r / 2}"/><feOffset dx="${dx}" dy="${dy}" result="${res}o"/>`
-        + `${flood}<feComposite in2="${res}o" operator="in" result="${res}"/>`;
-      drops.push(res);
-    } else {
-      // צל פנימי: האלפא ההפוכה, מטושטשת ומוזזת, נחתכת לצורה עצמה
-      body += `<feComponentTransfer in="SourceAlpha"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer>`
-        + `<feGaussianBlur stdDeviation="${r / 2}"/><feOffset dx="${dx}" dy="${dy}" result="${res}o"/>`
-        + `${flood}<feComposite in2="${res}o" operator="in"/><feComposite in2="SourceAlpha" operator="in" result="${res}"/>`;
-      inners.push(res);
-    }
-  });
-  const merge = [...drops.reverse(), 'SourceGraphic', ...inners].map((r) => `<feMergeNode in="${r}"/>`).join('');
-  return `<filter id="${id}" ${region} color-interpolation-filters="sRGB">${body}<feMerge>${merge}</feMerge></filter>`;
-}
-
-// כמה מקום הצל צריך סביב הצורה: 3 סטיות תקן של הטשטוש + ההיסט (וגם 30px לתנועה של ילדים: ריחוף, רוח)
-const fxPad = (list) => Math.max(...list.map(([, dx, dy, r]) => 1.5 * r + Math.max(Math.abs(dx), Math.abs(dy)))) + 30;
-
-/* איפה כל סגנון מופיע בעמוד 06 (לפי שמות השכבות) */
-const DEPTH = [
-  ['[data-part="library"] [data-n="ארון"] > rect:first-child', 'furniture'],
-  // פאנל על הקבוצה ולא על כל דלת/מגירה: הן לא נוגעות זו בזו, אז התוצאה זהה — ופילטר אחד במקום 48
-  ['[data-part="library"] [data-n="ארון תחתון"]', 'panel'],
-  ['[data-part="library"] [data-n^="מדף"] > rect:first-child', 'recess'],           // גב מדף
-  ['[data-part="library"] [data-n^="ספרים · מדף"]', 'book'],                        // על המדף כולו ולא על כל ספר (ביצועים)
-  ['[data-part="library"] [data-n="מנורה"]', 'touch'],
-  ['[data-part="table"] > g', 'furniture'],
-  ['[data-part="table"] rect[rx]', 'panel'],                                        // משטח השולחן העליון
-  ['[data-n="ידיים וחפץ"]', 'touch'],
-  // הדמויות (bodyA/B/C, 11.11): הסגנון מגיע מהשכבה עצמה ברכיב "דמות" 239:8969 (data-fxs בייצוא), לא לפי שם.
-  // כאן רק הידיים, שעדיין מעמוד 04
-  ['[data-part^="hands"] [data-n="בגד · שכבת ביניים"]', 'volume'],
-  // החור בראש (וריאנט ראש=פתוח): שקע ×1.3 כאפקט מקומי על "חור בראש"
-  ['.hole', 'hole'],
-  ['[data-part="aDrawers"] > g', 'panel'],
-  ['[data-n="חלון אור"]', 'recess'],
-  ['[data-part="aThreads"] [data-n="חוטים"], [data-part="aThreads"] [data-n="צמתים"]', 'float'],
-  ['[data-part="aLamp"] > g, [data-part="cClock"] > g, [data-n="מנורת צבעוני"]', 'float'],
-  ['[data-part^="bBranch"] > g', 'float'],
-  ['[data-n="גלים · רצועת נייר"], [data-n="קווים · רצועת נייר"], [data-n="סימנים · רצועת נייר"]', 'float'],
-  ['[data-n="ספר מעופף"]', 'float'],
-  ['[data-n="קפל נייר"]', 'touch'],
-  ['[data-n="קרע"]', 'tearDrop'],
-  ['[data-n="קרע"] > path:first-child', 'tear'],
-];
-
-// ביצועים: לכל אלמנט פילטר משלו, עם אזור צמוד לגבולות שלו + המרווח שהצל צריך (ולא אחוזים גורפים).
-// פחות פיקסלים לחישוב בכל פריים של המעבר לעולם
-function applyDepth() {
-  const defs = [];
-  let k = 0;
-  const targets = [];
-  for (const [selector, name] of DEPTH) scene.querySelectorAll(selector).forEach((n) => targets.push([n, name]));
-  // שכבות שהסגנון שלהן יוצא מ-Figma עצמה (data-fxs, ייצוא 11.11)
-  scene.querySelectorAll('[data-fxs]').forEach((n) => { if (FX[n.dataset.fxs]) targets.push([n, n.dataset.fxs]); });
-  for (const [n, name] of targets) {
-    const pad = fxPad(FX[name]);
-    const b = n.getBBox();
-    if (name === 'volume' && b.width < 20) continue;
-    const id = `fx-${name}-${k++}`;
-    const region = `filterUnits="userSpaceOnUse" x="${Math.floor(b.x - pad)}" y="${Math.floor(b.y - pad)}" `
-      + `width="${Math.ceil(b.width + 2 * pad)}" height="${Math.ceil(b.height + 2 * pad)}"`;
-    defs.push(fxFilter(id, FX[name], region));
-    n.setAttribute('filter', `url(#${id})`);
-    n.dataset.fx = name;
-  }
-  document.getElementById('scene-defs').insertAdjacentHTML('beforeend', defs.join(''));
-}
 
 /* הגדרות SVG שלא מגיעות מהייצוא */
 const SCENE_DEFS = `
-  <!-- מילוי הקרעים של לינוי (עמוד 06): רדיאלי, הצבעים מ-style.css -->
+  <!-- "חור בראש": צל פנימי קשיח (0, 5.3, בלי טשטוש) — חור בנייר ולא גזיר שמודבק מעליו.
+       ×1.3 כי החור כולו מוקטן ב-CSS (--hole-scale-open) ביחס לייצוא -->
+  <filter id="hole-inner" x="-10%" y="-10%" width="120%" height="140%" color-interpolation-filters="sRGB">
+    <feComponentTransfer in="SourceAlpha" result="inv"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer>
+    <feOffset in="inv" dy="6.9" result="off"/>
+    <feFlood flood-color="#1b1916"/>
+    <feComposite in2="off" operator="in"/>
+    <feComposite in2="SourceAlpha" operator="in" result="shade"/>
+    <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shade"/></feMerge>
+  </filter>
+  <!-- הארון התחתון של לינוי (cTears): ללא שינוי עד החלטה — המילוי הרדיאלי שלו כמו קודם -->
   <radialGradient id="linoy-tear-grad">
     <stop offset="0" style="stop-color: var(--linoy-tear-center)"/>
     <stop offset="0.6" style="stop-color: var(--linoy-tear-mid)"/>
     <stop offset="1" style="stop-color: var(--linoy-tear-edge-deep)"/>
   </radialGradient>
-  <!-- אור על הקיר: שקוף במרכז, מתכהה לקצוות בצבע הדיו של העולם -->
-  <radialGradient id="wall-light">
-    <stop offset="0" style="stop-color: var(--shadow-ink)" stop-opacity="0"/>
-    <stop offset="0.55" style="stop-color: var(--shadow-ink)" stop-opacity="0.03"/>
-    <stop offset="1" style="stop-color: var(--shadow-ink)" stop-opacity="0.16"/>
-  </radialGradient>`;
+  <!-- הקרעים של לינוי נפתחים מהראש שלה החוצה (main.js › markUnit 'rip') -->
+  <clipPath id="linoy-rip"><circle class="rip-circle" cx="249" cy="590"/></clipPath>`;
 
 /* ===== בנייה ===== */
 function el(tag, attrs = {}, parent) {
@@ -215,6 +115,14 @@ function placeTexts(key, root) {
   root.querySelectorAll('[data-text]').forEach((ph, i) => {
     const spot = spots && spots[i];
     if (!spot) { ph.remove(); return; }
+    // ייצוא 14.11: הטקסט כבר <text> במקומו — רק התוכן והסגנון
+    if (ph.tagName === 'text') {
+      ph.setAttribute('text-anchor', 'middle');
+      ph.setAttribute('dominant-baseline', 'central');
+      ph.classList.add('world-text');
+      ph.textContent = spot.text;
+      return;
+    }
     const [x, y, w, h] = spot.box;
     const cx = x + w / 2;
     const cy = y + h / 2;
@@ -228,6 +136,9 @@ function placeTexts(key, root) {
     ph.replaceWith(t);
   });
 }
+
+// מרכז של צורה על המסך (להשוואת מרחקים בלבד)
+const screenCenter = (n) => { const r = n.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
 
 /* תיקונים אחרי הייבוא */
 const GRID_STEP = 33.9;
@@ -245,6 +156,28 @@ const CLEANUP = {
       r.setAttribute('y', Math.round(y * 10) / 10);
       first.before(r);
     }
+  },
+  // לינוי: כל סימן (כוכב / ספירלה / שמש) יחד עם פיסת הנייר שלו בקבוצה אחת —
+  // כך שהם מסתובבים יחד סביב אותו מרכז בדיוק. ה-<g class="spin"> הפנימי מסתובב, ה-<g> החיצוני הוא יחידת ההשתלטות
+  cDecor: (root) => {
+    const strips = [...root.querySelectorAll('[data-n="סימנים · רצועת נייר"] > *')].map((n) => ({ n, c: screenCenter(n) }));
+    const stripsGroup = root.querySelector('[data-n="סימנים · רצועת נייר"]');
+    const marks = [...root.querySelectorAll('[data-n="כוכבים"] > *, [data-n="ספירלות"] > *, [data-n="שמשות"] > *')];
+    for (const m of marks) {
+      const c = screenCenter(m);
+      let best = null;
+      let bestD = Infinity;
+      for (const s of strips) {
+        const d = Math.hypot(s.c.x - c.x, s.c.y - c.y);
+        if (!s.used && d < bestD) { best = s; bestD = d; }
+      }
+      const unit = el('g', { 'data-n': 'סימן' });
+      const spin = el('g', { class: 'spin' }, unit);
+      if (best) { best.used = true; spin.append(best.n); }
+      spin.append(m);
+      stripsGroup.before(unit);
+    }
+    root.querySelectorAll('[data-n="סימנים · רצועת נייר"], [data-n="כוכבים"], [data-n="ספירלות"], [data-n="שמשות"]').forEach((g) => g.remove());
   },
 };
 
@@ -270,7 +203,7 @@ const YAEL_HEAD = { x: 720, y: 618 };   // הענפים יוצאים מכאן (�
 
 function markUnit(u, type, id) {
   if (u.classList.contains('u')) return;
-  // לשכבה עם שקיפות משלה (קווי בנייה 70%, פאות 9%): היחידה היא עטיפה, כדי שהשקיפות שלה תישמר
+  // לשכבה עם שקיפות משלה: היחידה היא עטיפה, כדי שהשקיפות שלה תישמר
   if (u.hasAttribute('opacity') && u.tagName !== 'g') {
     const wrap = el('g');
     u.before(wrap);
@@ -284,13 +217,19 @@ function markUnit(u, type, id) {
     const b = u.getBBox();
     u.classList.add(b.width >= b.height ? 'u-stretch-x' : 'u-stretch-y');
   }
+  if (type === 'rip') {
+    // הקרעים של לינוי: נפתחים מהראש שלה החוצה (עיגול חיתוך שגדל), מה שבתוכם מופיע אחרי
+    u.classList.add('u-rip');
+    u.setAttribute('clip-path', 'url(#linoy-rip)');
+    u.querySelectorAll(':scope > [data-n="כוכבים"], :scope > [data-n="ספר מעופף"], :scope > g:not([data-n])')
+      .forEach((n) => n.classList.add('tear-inner'));
+  }
   if (type === 'tear') {
-    // הקרע נקרע מהסדק: מתוח לאורך הציר הארוך שלו
+    // הארון התחתון של לינוי (ללא שינוי): הקרע נקרע מהסדק, מתוח לאורך הציר הארוך שלו
     u.classList.add('u-tear');
     const b = u.getBBox();
     u.style.setProperty('--crack', b.width >= b.height ? '1 0.05' : '0.05 1');
     u.style.setProperty('--crack-0', b.width >= b.height ? '1 0' : '0 1');
-    // מה שבתוך הקרע מופיע רק אחרי שהוא נפתח
     u.querySelectorAll('[data-n="כוכבים"], [data-n="ירח"], :scope > [data-n="כוכב לכת"], :scope > [data-n="ספר מעופף"]')
       .forEach((n) => n.classList.add('tear-inner'));
     u.querySelectorAll('[data-n="קפל נייר"]').forEach((n) => n.classList.add('tear-fold'));
@@ -331,6 +270,54 @@ function makePaintable(root) {
   });
 }
 
+/* ===== צל "גזירי נייר" (עדכון 14.11) =====
+   צל אחד בכל הסצנה: שחור 25%, היסט 1px ימינה, בלי טשטוש (0.2px ב-Figma — לא נראה בגודל הזה).
+   במקום פילטר לכל צורה: עותק של הצורה, בשחור 25%, מוזז 1px, ממש מאחוריה. זה בדיוק אותו מראה
+   (גם הצל שצורה מטילה על צורה סמוכה, כמו ספר על ספר), בלי עלות של פילטר בזמן המעבר לעולם.
+   על מה: כל צורה מלאה (בדיוק כמו בפיגמה, שכבה-שכבה). בלי: קווים דקים, טקסט, גריד, קווי מידה, החוטים, הקרעים */
+const SHADOW_SCOPES = [
+  '[data-part="library"] [data-n="ארון"]', '.lamp-before',
+  '[data-part^="body"]', '[data-part^="hole"] [data-n="מוח"]', '[data-part^="hands"]', '[data-part="table"]',
+  '[data-part="aDrawers"]', '[data-part="bWindows"]', '[data-part="bTulip"]', '[data-part^="bBranch"]',
+  '[data-part="cClock"]', '[data-part="cTears"]',
+];
+const SHADOW_SHAPES = 'path, rect, circle, ellipse, polygon';
+const SHADOW_OFFSET = { '[data-part^="hole"]': 1.3 };   // החור מוקטן ×1/1.3 ב-CSS: ההיסט על המסך נשאר 1px
+
+function paperShadows() {
+  const shapes = new Set();
+  for (const scope of SHADOW_SCOPES) scene.querySelectorAll(scope).forEach((g) => g.querySelectorAll(SHADOW_SHAPES).forEach((n) => shapes.add(n)));
+  // בחלקים שיוצאו ב-14.11 הצל מסומן בשכבה עצמה (data-fx="d"), בדיוק לפי Figma
+  scene.querySelectorAll(`[data-fx*="d"]`).forEach((n) => (n.matches(SHADOW_SHAPES) ? [n] : n.querySelectorAll(SHADOW_SHAPES)).forEach((s) => shapes.add(s)));
+  let count = 0;
+  for (const n of shapes) {
+    if (n.closest('.glow, [data-n="מסלול"], [data-n="חור"], .pc')) continue;
+    if (n.matches('[data-n="חור"]') || n.hasAttribute('opacity') || n.hasAttribute('fill-opacity')) continue;
+    if (getComputedStyle(n).display === 'none') continue;
+    const fill = n.getAttribute('fill') || n.style.fill || '';
+    const stroke = n.getAttribute('stroke') || n.style.stroke || '';
+    const hasFill = fill && fill !== 'none';
+    const hasStroke = stroke && stroke !== 'none';
+    // שכבות-על שקופות ("צל", "שכבת ביניים", "over") — לא גזיר נייר
+    if (/paper-shade|-over\)|shade\)/.test(fill)) continue;
+    // קו דק בלי מילוי (גבעול, שורות בספר, מידות) — בלי צל
+    if (!hasFill && (!hasStroke || Number(n.getAttribute('stroke-width') || 1) < 3)) continue;
+    const c = n.cloneNode(false);
+    c.removeAttribute('data-n');
+    c.removeAttribute('data-fx');
+    c.classList.remove('p');
+    c.classList.add('pc');
+    if (hasFill) c.style.fill = 'var(--paper-cut)';
+    if (hasStroke) c.style.stroke = 'var(--paper-cut)';
+    const scoped = Object.entries(SHADOW_OFFSET).find(([sel]) => n.closest(sel));
+    const dx = scoped ? scoped[1] : 1;
+    c.setAttribute('transform', `translate(${dx} 0) ${n.getAttribute('transform') || ''}`.trim());
+    n.before(c);
+    count++;
+  }
+  return count;
+}
+
 const chars = {};  // id -> { groups: [body, hands], brain, button }
 
 function buildScene() {
@@ -343,8 +330,6 @@ function buildScene() {
   wall.querySelectorAll('rect').forEach((r) => {
     r.setAttribute('x', 0); r.setAttribute('y', 0); r.setAttribute('width', 1440); r.setAttribute('height', 1024);
   });
-  // "ניסוי · אור על הקיר" (233:10): 1526×1234 בקואורדינטות הבמה, multiply, מעל הקיר ומתחת לגריד
-  el('rect', { class: 'wall-light', x: -43.2, y: -115, width: 1526.4, height: 1234, fill: 'url(#wall-light)' }, wall);
   let anchor = wall;
   for (const id of ['A', 'B', 'C']) {
     if (!WORLDS[id].under) continue;
@@ -355,7 +340,7 @@ function buildScene() {
   }
   library.querySelector('[data-n="מנורה"]')?.classList.add('lamp-before');
 
-  // 2. העולמות מאחורי הדמויות
+  // 2. העולמות מאחורי הדמויות (כולל החוטים של אריאל)
   const back = el('g', { class: 'layer-worlds' }, scene);
   for (const id of ['A', 'B', 'C']) if (WORLDS[id].back) buildWorldLayer(id, WORLDS[id].back, back);
 
@@ -369,12 +354,22 @@ function buildScene() {
     part(CHARACTERS[id].body, g);
     const hole = part(CHARACTERS[id].hole, g);
     hole.classList.add('hole');
+    // "חור": המילוי עם צל פנימי, השפה (stroke מחוץ לצורה) בנפרד — הצל הפנימי רק בתוך החור
+    const opening = hole.querySelector('[data-n="חור"]');
+    if (opening) {
+      const rim = opening.cloneNode(false);
+      rim.removeAttribute('data-n');
+      rim.setAttribute('fill', 'none');
+      opening.before(rim);
+      opening.removeAttribute('stroke');
+      opening.setAttribute('filter', 'url(#hole-inner)');
+    }
     const brain = hole.querySelector('[data-n="מוח"]');
     brain.classList.add('brain');
     chars[id] = { groups: [g], brain };
   }
 
-  // 4. השולחן, 5. ידיים וחפץ
+  // 4. השולחן (עם חזית מלאה שמסתירה את הרגליים), 5. ידיים וחפץ
   part('table', el('g', { class: 'layer-table' }, scene));
   const hands = el('g', { class: 'layer-hands' }, scene);
   for (const id of ORDER) {
@@ -384,11 +379,8 @@ function buildScene() {
     chars[id].groups.push(g);
   }
 
-  // 6. חוטי אריאל, מעל הדמויות
-  const front = el('g', { class: 'layer-threads' }, scene);
-  for (const id of ['A', 'B', 'C']) if (WORLDS[id].front) buildWorldLayer(id, WORLDS[id].front, front);
-
-  applyDepth();
+  // אפקטי העומק הישנים (עמוד 06) מסומנים בייצוא של הדמויות — לא בשימוש יותר
+  scene.querySelectorAll('[data-fxs]').forEach((n) => n.removeAttribute('data-fxs'));
   makePaintable(scene);
 }
 
@@ -463,22 +455,18 @@ function setActive(nextId) {
   if (activeId) threads?.leave();
 
   activeId = nextId;
-  clearPeek();
   if (opening) {
     stage.dataset.mode = nextId;
-    document.body.dataset.mode = nextId;   // השוליים סביב הבמה בצבע העולם
     scheduleHint(nextId);
     document.getElementById('power').textContent = CONTENT.characters[nextId].power;
-    hoveredOnce = true;   // מעכשיו ההצצה חוזרת רק כשהעכבר idle
-    noteActivity();
+    stopPeek();   // אחרי הכניסה הראשונה לעולם — הרמז מתבטל לגמרי עד רענון הדף
   } else {
     delete stage.dataset.mode;
-    delete document.body.dataset.mode;
     cancelHint();
   }
   stage.classList.toggle('has-world', opening);
 
-  // העולם שנסגר מקבל is-closing לזמן החזרה, כדי שהקרעים ייסגרו חזרה לסדק (ולא יהבהבו בטעינה)
+  // העולם שנסגר מקבל is-closing לזמן החזרה, כדי שהקרעים ייסגרו חזרה (ולא יהבהבו בטעינה)
   for (const id of Object.keys(worldGroups)) {
     for (const g of worldGroups[id]) {
       const wasOpen = g.classList.contains('is-open');
@@ -498,12 +486,11 @@ function setActive(nextId) {
   }
 }
 
-/* ===== hover, מיקוד והצצה ===== */
+/* ===== hover ===== */
 let hoverId = null;
 let hoveredOnce = false;
 
-// ההצצה נעצרת רק על כוונה: hover שנמשך --peek-hover-intent (או לחיצה, שפותחת עולם).
-// ריחוף מקרי (סמן שנח במרכז המסך ורועד בזמן הטעינה) כבר לא מבטל את הרמז לתמיד
+// hover שנמשך --peek-hover-intent (חצי שנייה) עוצר את הרמז; ריחוף מקרי לא
 let hoverIntent = 0;
 function setHover(id) {
   if (id === hoverId) return;
@@ -515,12 +502,36 @@ function setHover(id) {
   }
 }
 
-// רמז גילוי: ראש אקראי "מציץ" — בביקור הראשון, ואחר כך בכל פעם שהעכבר idle (ראו peekOnce)
+/* ===== רמז לפעולה (עדכון 14.11, מחליף את ה"הצצה") =====
+   כשהעכבר לא זז ואין hover, הדמויות רק גדלות מעט (×1.04) וחוזרות — בלי לפתוח את הראש ובלי מוח.
+   סדר קבוע: אריאל, יעל, לינוי, וחוזר חלילה. הראשונה אחרי --motion-peek-first, ואז כל --motion-peek-interval.
+   נעצר: hover של חצי שנייה ומעלה; חוזר אחרי --motion-peek-idle בלי תזוזה.
+   אחרי הכניסה הראשונה לעולם — מתבטל לגמרי עד רענון הדף. לא רץ ב-prefers-reduced-motion */
 let peekTimer = 0;
+let peekFirst = 0;
+let peekIndex = 0;
+let lastActivity = performance.now();
+function noteActivity() { lastActivity = performance.now(); }
+function clearPeek() { Object.values(chars).forEach((c) => c.groups.forEach((g) => g.classList.remove('is-peek'))); }
+function peekOnce() {
+  if (activeId || hoverId) return;
+  if (hoveredOnce && performance.now() - lastActivity < ms('--motion-peek-idle')) return;
+  const c = chars[HINT_ORDER[peekIndex % HINT_ORDER.length]];
+  peekIndex++;
+  c.groups.forEach((g) => g.classList.add('is-peek'));
+  setTimeout(() => c.groups.forEach((g) => g.classList.remove('is-peek')), ms('--motion-hover-open') + ms('--peek-hold'));
+}
+function startPeek() {
+  if (reducedMotion) return;
+  peekFirst = setTimeout(peekOnce, ms('--motion-peek-first'));
+  peekTimer = setInterval(peekOnce, ms('--motion-peek-interval'));
+}
+function stopPeek() { clearTimeout(peekFirst); clearInterval(peekTimer); peekTimer = 0; clearPeek(); }
+
 /* רמז בתוך העולם (שיפור 11.11): אם העכבר לא זז ~3 שניות אחרי שהעולם נפתח, המיקרו-אינטראקציה
-   של העולם מודגמת פעם אחת — אותו היגיון כמו ההצצה ב"לפני". תזוזת עכבר מבטלת. לא ב-reduced-motion */
+   של העולם מודגמת פעם אחת על האלמנט הקרוב למרכז הספרייה. תזוזת עכבר מבטלת. לא ב-reduced-motion */
 let hintTimer = 0;
-const HINT_CENTER = { x: 720, y: 330 };   // מרכז הספרייה: האלמנט הקרוב אליו הוא שמודגם
+const HINT_CENTER = { x: 720, y: 330 };
 function cancelHint() { clearTimeout(hintTimer); hintTimer = 0; }
 function scheduleHint(id) {
   cancelHint();
@@ -540,19 +551,16 @@ function closestTo(list, point) {
 }
 function playHint(id) {
   if (id === 'A') {
-    // צומת נמשך לכיוון "עכבר" דמיוני וחוזר בקפיץ
     const c = closestTo(document.querySelectorAll('[data-part="aThreads"] [data-n^="צומת"]'), HINT_CENTER);
     if (!c) return;
     threads?.move(c.x + 30, c.y + 30);
     setTimeout(() => { if (activeId === 'A') threads?.leave(); }, 700);
   } else if (id === 'B') {
-    // פרח נדלק ונכבה
     const c = closestTo(glows.map((g) => g.el), HINT_CENTER);
     if (!c) return;
     lightFlowers(c.x, c.y);
     setTimeout(() => { if (activeId === 'B') lightFlowers(-999, -999); }, 1200);
   } else if (id === 'C') {
-    // הכוכבים והספירלות ליד המרכז מסתובבים
     const c = closestTo(decor.map((d) => d.ref), HINT_CENTER);
     if (!c) return;
     spinDecor(c.x, c.y);
@@ -560,36 +568,14 @@ function playHint(id) {
   }
 }
 
-/* ההצצה חוזרת כשהעכבר idle (החלטה 11.11): בביקור הראשון היא רצה כרגיל; אחרי אינטראקציה אמיתית
-   (hover מכוון או פתיחת עולם) היא חוזרת רק אחרי --motion-peek-idle בלי תזוזה, ונעצרת ברגע שזזים.
-   בתוך עולם מציצות רק שתי הדמויות האחרות — "אפשר לעבור לעולם שלה". */
-let peekFirst = 0;
-let lastActivity = performance.now();
-function noteActivity() { lastActivity = performance.now(); }
-function clearPeek() { Object.values(chars).forEach((c) => c.groups.forEach((g) => g.classList.remove('is-peek'))); }
-function peekOnce() {
-  if (hoverId) return;   // העכבר כבר על דמות — לא מציצים במקביל
-  if (hoveredOnce && performance.now() - lastActivity < ms('--motion-peek-idle')) return;
-  const ids = Object.keys(chars).filter((id) => id !== activeId);
-  const c = chars[ids[Math.floor(Math.random() * ids.length)]];
-  c.groups.forEach((g) => g.classList.add('is-peek'));
-  setTimeout(() => c.groups.forEach((g) => g.classList.remove('is-peek')),
-    ms('--motion-hover-open') + ms('--peek-hold'));
-}
-// ההצצה הראשונה כמעט מיד (שיפור 11.11): המסך לא עומד סטטי ברגע שבו מחליטים אם ברור מה עושים
-function startPeek() {
-  if (reducedMotion) return;
-  peekFirst = setTimeout(peekOnce, ms('--motion-peek-first'));
-  peekTimer = setInterval(peekOnce, ms('--motion-peek-interval'));
-}
-function stopPeek() { clearTimeout(peekFirst); clearInterval(peekTimer); peekTimer = 0; }
-
-/* ===== אריאל: החוטים נמתחים לכיוון העכבר ===== */
+/* ===== אריאל: החוטים נמתחים לכיוון העכבר =====
+   כל חוט הוא קו שבור דרך הצמתים (מניפה שיוצאת מאחורי הראש). כל מקטע בין שני צמתים נמתח בנפרד
+   לכיוון העכבר (קשת עדינה) וחוזר בקפיץ; הצמתים עצמם נשארים במקום */
 let threads = null;
 function setupThreads() {
   const root = document.querySelector('[data-part="aThreads"]');
   if (!root) return;
-  const reach = 140;   // px: רדיוס הרגישות. שיפור 11.11: היה 80 — עכשיו קרוב לשאר העולמות (120–260)
+  const reach = 140;   // px: רדיוס הרגישות
   const pull = 24;     // px: משיכה מקסימלית
   const stiffness = 0.12;
   const damping = 0.78;
@@ -598,49 +584,52 @@ function setupThreads() {
     const paths = [...g.querySelectorAll(':scope > path')];
     const t = paths[0].getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)\)/);
     const nums = paths[0].getAttribute('d').match(/-?[\d.]+/g).map(Number);
-    const tx = Number(t[1]);
-    const ty = Number(t[2]);
-    const a = { x: tx + nums[0], y: ty + nums[1] };
-    const b = { x: tx + nums[2], y: ty + nums[3] };
+    const pts = [];
+    for (let i = 0; i + 1 < nums.length; i += 2) pts.push({ x: Number(t[1]) + nums[i], y: Number(t[2]) + nums[i + 1] });
     paths.forEach((p) => p.removeAttribute('transform'));
-    // נקודות זרימה: עותק של החוט, מעליו
+    // נקודות זרימה: נקודות קטנות ובהירות בתוך החוט האדום (לא מכסות אותו)
     const flow = el('path', { class: 'flow' });
     paths[paths.length - 1].after(flow);
-    return { a, b, paths: [...paths, flow], ox: 0, oy: 0, vx: 0, vy: 0, tx: 0, ty: 0 };
+    const segs = pts.slice(1).map((b, i) => ({ a: pts[i], b, ox: 0, oy: 0, vx: 0, vy: 0, tx: 0, ty: 0 }));
+    return { start: pts[0], segs, paths: [...paths, flow] };
   });
+  const segs = list.flatMap((l) => l.segs);
 
   let mouse = null;
   let frame = 0;
   const render = () => {
     for (const l of list) {
-      const cx = (l.a.x + l.b.x) / 2 + l.ox * 2;
-      const cy = (l.a.y + l.b.y) / 2 + l.oy * 2;
-      const d = `M${l.a.x} ${l.a.y} Q${cx} ${cy} ${l.b.x} ${l.b.y}`;
+      let d = `M${l.start.x} ${l.start.y}`;
+      for (const s of l.segs) {
+        const cx = (s.a.x + s.b.x) / 2 + s.ox * 2;
+        const cy = (s.a.y + s.b.y) / 2 + s.oy * 2;
+        d += ` Q${cx.toFixed(1)} ${cy.toFixed(1)} ${s.b.x} ${s.b.y}`;
+      }
       for (const p of l.paths) p.setAttribute('d', d);
     }
   };
   const tick = () => {
     let moving = Boolean(mouse);
-    for (const l of list) {
-      l.tx = 0; l.ty = 0;
+    for (const s of segs) {
+      s.tx = 0; s.ty = 0;
       if (mouse) {
-        const vx = l.b.x - l.a.x;
-        const vy = l.b.y - l.a.y;
-        const t = Math.max(0, Math.min(1, ((mouse.x - l.a.x) * vx + (mouse.y - l.a.y) * vy) / (vx * vx + vy * vy)));
-        const dx = mouse.x - (l.a.x + vx * t);
-        const dy = mouse.y - (l.a.y + vy * t);
+        const vx = s.b.x - s.a.x;
+        const vy = s.b.y - s.a.y;
+        const t = Math.max(0, Math.min(1, ((mouse.x - s.a.x) * vx + (mouse.y - s.a.y) * vy) / (vx * vx + vy * vy)));
+        const dx = mouse.x - (s.a.x + vx * t);
+        const dy = mouse.y - (s.a.y + vy * t);
         const dist = Math.hypot(dx, dy);
         if (dist > 0 && dist < reach) {
           const amount = Math.min(dist, pull) * (1 - dist / reach) * 4 * t * (1 - t);
-          l.tx = (dx / dist) * amount;
-          l.ty = (dy / dist) * amount;
+          s.tx = (dx / dist) * amount;
+          s.ty = (dy / dist) * amount;
         }
       }
-      l.vx = (l.vx + (l.tx - l.ox) * stiffness) * damping;
-      l.vy = (l.vy + (l.ty - l.oy) * stiffness) * damping;
-      l.ox += l.vx;
-      l.oy += l.vy;
-      if (Math.abs(l.ox) + Math.abs(l.oy) + Math.abs(l.vx) + Math.abs(l.vy) > 0.02) moving = true;
+      s.vx = (s.vx + (s.tx - s.ox) * stiffness) * damping;
+      s.vy = (s.vy + (s.ty - s.oy) * stiffness) * damping;
+      s.ox += s.vx;
+      s.oy += s.vy;
+      if (Math.abs(s.ox) + Math.abs(s.oy) + Math.abs(s.vx) + Math.abs(s.vy) > 0.02) moving = true;
     }
     render();
     frame = moving ? requestAnimationFrame(tick) : 0;
@@ -691,14 +680,14 @@ function setupYael() {
 }
 
 // מרכז אלמנט בקואורדינטות הבמה, לפי המיקום שלו על המסך בפועל (כולל רוח, ריחוף והסקייל של הבמה).
-// הילה בסקייל 0 מתכווצת לנקודה — המרכז שלה הוא מרכז הפרח
+// כך המרחק נכון בכל גודל חלון (הבאג הישן: getBBox בקואורדינטות מקומיות)
 function stageCenter(node) {
   const r = node.getBoundingClientRect();
   return stagePoint({ clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 });
 }
 
-// כל פרח שקרוב לעכבר מ-90px נדלק; העוצמה לפי המרחק (קרוב = הילה מלאה). כמה בבת אחת
-const GLOW_RADIUS = 260; // 11.11: נדלק כבר מרחוק (היה 150, ובמקור 90)
+// כל פרח שקרוב לעכבר נדלק; העוצמה לפי המרחק (קרוב = הילה מלאה). כמה בבת אחת
+const GLOW_RADIUS = 260;
 function lightFlowers(x, y) {
   for (const g of glows) {
     const c = stageCenter(g.el);
@@ -707,16 +696,10 @@ function lightFlowers(x, y) {
   }
 }
 
-/* ===== לינוי: גלים, כנפיים, מסלול לספר הקרוב ===== */
+/* ===== לינוי: ספרים מרחפים ומנפנפים, מסלול לספר הקרוב ===== */
 const books = [];
 function setupLinoy() {
-  ['גלים', 'גלים · רצועת נייר'].forEach((name) => {
-    document.querySelectorAll(`[data-n="${name}"] > path`).forEach((p, i) => {
-      p.classList.add('ripple');
-      p.style.setProperty('--ripple-delay', `${i * 0.75}s`);
-    });
-  });
-  // כל ספר (גם אלה שבתוך הקרעים בארון) מרחף במסלול קטן ומנפנף בכריכות
+  // כל ספר (בקרעים ובארון התחתון) מרחף במסלול קטן ומנפנף בכריכות
   document.querySelectorAll('[data-n="ספר מעופף"]').forEach((book, i) => {
     const wings = book.querySelector('[data-n="ספר-ציפור"]');
     wings.classList.add('flap', 'book-tilt');
@@ -727,31 +710,16 @@ function setupLinoy() {
     hover.style.setProperty('--float-dur', `${3 + (i % 3) * 0.5}s`);
     hover.style.setProperty('--float-delay', `${-i * 0.9}s`);
     book.querySelector('[data-n="מסלול"]')?.classList.add('orbit-path');
-    books.push({ el: book, ref: wings, r: 120 }); // הוגדל 10.11: היה 70
+    books.push({ el: book, ref: wings, r: 120 });
   });
 }
 
-// לינוי: כוכבים, ספירלות ושמשות מסתובבים בעדינות במקום כשהעכבר קרוב (עודכן 11.11 — בלי תזוזה)
-// כל צורה עטופה ב-<g> משלה: ה-transform-origin של fill-box על ה-<g> הוא מרכז הצורה בפועל
-// (על ה-path עצמו המרכז מחושב לפני ה-transform שלו, ולכן הצורה הייתה "עפה").
-// רצועת הנייר הלבנה של כל ספירלה/שמש מסתובבת יחד איתה, סביב אותו מרכז.
-// סבב באגים 11.11: כניסה לטווח = סיבוב שלם אחד (360°), מצטבר — תמיד קדימה. בטווח נשארת במקום.
+// לינוי: כוכבים, ספירלות ושמשות — כניסת העכבר לטווח = סיבוב שלם אחד (360°), מצטבר — תמיד קדימה.
+// הסימן ופיסת הנייר שלו באותו <g class="spin"> (CLEANUP.cDecor), כך שהם מסתובבים יחד סביב אותו מרכז
 const DECOR_RADIUS = ms('--linoy-spin-radius');   // 220px
 const decor = [];
 function setupLinoyDecor() {
-  const root = document.querySelector('[data-part="cAssoc"]');
-  if (!root) return;
-  const wrap = (n) => { const g = el('g', { class: 'spin' }); n.before(g); g.append(n); return g; };
-  const center = (n) => { const r = n.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
-  const strips = [...root.querySelectorAll('[data-n="סימנים · רצועת נייר"] > path')].map((n) => ({ n, c: center(n) }));
-  root.querySelectorAll('[data-n="כוכבים"] > *, [data-n="ספירלות"] > *, [data-n="שמשות"] > *').forEach((p) => {
-    const c = center(p);
-    const strip = strips.find((s) => !s.used && Math.hypot(s.c.x - c.x, s.c.y - c.y) < 3);
-    if (strip) strip.used = true;
-    const els = [wrap(p)];
-    if (strip) els.push(wrap(strip.n));
-    decor.push({ ref: els[0], els });
-  });
+  document.querySelectorAll('[data-part="cDecor"] .spin').forEach((g) => decor.push({ ref: g, els: [g] }));
 }
 function spinDecor(x, y) {
   for (const d of decor) {
@@ -805,9 +773,8 @@ function bindEvents() {
     spinDecor(-9999, -9999);
   });
 
-  // לחיצה על כל הדמות (לא רק המוח) פותחת את העולם שלה; לחיצה עליה כשהעולם שלה פתוח סוגרת;
-  // לחיצה על דמות אחרת כשעולם פתוח = מעבר ישיר. click מגיע רק אם הלחיצה והשחרור על אותה דמות
-  // משוב לחיצה: המוח נמעך מיד בלחיצה על כל חלק בדמות (גם על הידיים, שהן שכבה נפרדת)
+  // לחיצה על כל הדמות פותחת את העולם שלה; לחיצה עליה כשהעולם שלה פתוח סוגרת;
+  // לחיצה על דמות אחרת כשעולם פתוח = מעבר ישיר. משוב לחיצה: המוח נמעך מיד
   const release = () => Object.values(chars).forEach((c) => c.groups.forEach((g) => g.classList.remove('is-press')));
   scene.addEventListener('pointerdown', (event) => {
     const c = event.target.closest('.char');
@@ -841,7 +808,6 @@ function bindEvents() {
 /* ===== התאמת הבמה לחלון ===== */
 function fitStage() {
   const scale = Math.min(window.innerWidth / stage.offsetWidth, window.innerHeight / stage.offsetHeight);
-  // על השורש, כדי שגם השוליים (body: אור על הקיר והגריד) יתאימו לסקייל של הבמה
   document.documentElement.style.setProperty('--stage-scale', scale);
 }
 
@@ -853,6 +819,7 @@ function init() {
   setupYael();
   setupLinoy();
   setupLinoyDecor();
+  paperShadows();   // אחרון: הצל הוא עותק של כל צורה, כולל המחלקות שנקבעו בשלבים הקודמים
   bindEvents();
   fitStage();
   startPeek();

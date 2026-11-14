@@ -34,7 +34,7 @@ const CONTENT = {
     A: {
       shelfNumbers: ['01', '02', '03'],
       dimensions: { width: '1248', height: '584' },
-      lampAngle: '38°',
+      lampAngle: '68°',
     },
   },
 };

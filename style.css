@@ -53,7 +53,6 @@
   --motion-ariel-pull: 400ms;
   --motion-yael-wind: 2400ms;
   --motion-yael-glow: 300ms;
-  --motion-linoy-ripple: 3000ms;
   --motion-linoy-flap: 2000ms;
   --motion-linoy-orbit: 300ms;
   --motion-linoy-spin: 600ms;     /* כוכב/ספירלה/שמש: סיבוב שלם בכניסה לטווח */
@@ -104,12 +103,13 @@
   --motion-peek-idle: 6000ms;    /* אחרי אינטראקציה: ההצצה חוזרת רק אחרי כך וכך בלי תזוזה */
   --char-scale-hover: 1.04;      /* hover: הדמות גדלה */
   --hole-rim: var(--color-bg-page);  /* שפת החור ושפת הנייר של המוח. בעולם: הקיר הבהיר של העולם (אין אפור בעולם) */
-  --hole-scale-open: 1;         /* 11.11: החור והמוח מיוצאים מוריאנט ראש=פתוח, כבר בגודל ×1.3 */
+  --hole-scale-open: 0.7692;    /* 14.11: החור והמוח בגודל של עמודים 04–05 (הייצוא הוא מעמוד 06, ×1.3) */
   --yael-grow: 900ms;            /* ענף צומח מהראש */
   --glow-fade: 400ms;            /* כיבוי רך של אור הפרח */
   --tear-crack: 120ms;           /* סדק דק */
   --tear-open: 450ms;            /* הקרע נפתח מהסדק */
   --tear-fold: 300ms;            /* הקפל מתקפל החוצה */
+  --tear-rip: 1200ms;            /* לינוי: הקרעים נקרעים מהראש החוצה */
   --ease-open: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);   /* קרעים: overshoot קטן */
   --ease-close: cubic-bezier(0.55, 0, 0.75, 0.3);
@@ -119,24 +119,21 @@
   --stage-w: 1440px;
   --stage-h: 1024px;
 
-  /* עומק וצללים (עמוד 06, "סצנה · לפי עולם" › ניסוי עומק). מקור אור אחד מלמעלה.
-     ב"לפני" הצל ניטרלי; בעולם הוא בגוון העולם. --shadow-ink = אותו גוון בלי שקיפות (לאור על הקיר) */
-  --shadow-contact: rgba(27, 24, 22, .26);
-  --shadow-ambient: rgba(27, 24, 22, .18);
-  --shadow-inner: rgba(27, 24, 22, .24);
-  --shadow-ink: rgb(27, 24, 22);
-  --shadow-highlight: rgba(255, 255, 255, .45);
-  --shadow-volume-light: rgba(255, 255, 255, .14);
+  /* צל "גזירי נייר" (14.11): צל אחד בכל הסצנה — שחור 25%, 1px ימינה (main.js › paperShadows) */
+  --paper-cut: rgba(0, 0, 0, .25);
+  --paper-cut-css: drop-shadow(1px 0 0.2px var(--paper-cut));
+  /* השוליים מחוץ לבמה: צבע ניטרלי קבוע בכל המצבים (14.11) */
+  --stage-margin: #d9d7d3;
+  --stage-edge: rgba(26, 25, 23, .18);
 }
 
-/* עמוד 06: הצל הקשיח הישן ("צל ארון", "צל מדף") הוסר — העומק מגיע מהפילטרים (main.js › FX) */
+/* הצל הקשיח הישן ("צל ארון", "צל מדף") בגוון העולם — בוטל (עדכון 14.11) */
 .scene [fill="var(--lib-case-shadow)"], .scene [fill="var(--lib-shelf-shade)"] { display: none; }
-.wall-light { mix-blend-mode: multiply; pointer-events: none; }
-/* הצל עובר יחד עם העולם */
-.scene feFlood { transition: flood-color var(--paint-dur, 600ms) var(--paint-ease, ease); }
+/* צל גזירי נייר: עותק הצורה מאחוריה — לא מגיב לעכבר ולא משנה צבע */
+.pc { pointer-events: none; }
 
 /* ===== מצבי העולם (סצנה · לפי עולם) ===== */
-.stage[data-mode="A"], body[data-mode="A"] {
+.stage[data-mode="A"] {
   --lib-wall: #fef7f5; --lib-case: #faedeb; --lib-case-shadow: #a86f631a; --lib-door: #f7e5e2;
   --lib-shelf-back: #f7e0dd; --lib-shelf-shade: #a86f631a;
   --lib-band-dark: #89221c; --lib-band-light: #fef7f5;
@@ -146,10 +143,8 @@
   --world-book-1: #fac6c1; --world-book-2: #f8deda; --world-book-3: #fef4f3;
   --world-book-4: #5b1713; --world-book-5: #89221c; --world-book-6: #055353;
   --world-highlight: #9e2219;
-  --shadow-contact: rgba(88, 14, 22, .26); --shadow-ambient: rgba(88, 14, 22, .18);
-  --shadow-inner: rgba(88, 14, 22, .24); --shadow-ink: rgb(88, 14, 22);
 }
-.stage[data-mode="B"], body[data-mode="B"] {
+.stage[data-mode="B"] {
   --lib-wall: #fff5e7; --lib-case: #fce8ca; --lib-case-shadow: #a9783f1a; --lib-door: #f9e1bc;
   --lib-shelf-back: #f8ddb5; --lib-shelf-shade: #a9783f1a;
   --lib-band-dark: #5f4106; --lib-band-light: #fff7ec;
@@ -159,10 +154,8 @@
   --world-book-1: #f8d193; --world-book-2: #fee4bc; --world-book-3: #fff5e7;
   --world-book-4: #4f2b08; --world-book-5: #664604; --world-book-6: #d3caf5;
   --world-highlight: #8a5910;
-  --shadow-contact: rgba(84, 52, 12, .26); --shadow-ambient: rgba(84, 52, 12, .18);
-  --shadow-inner: rgba(84, 52, 12, .24); --shadow-ink: rgb(84, 52, 12);
 }
-.stage[data-mode="C"], body[data-mode="C"] {
+.stage[data-mode="C"] {
   --lib-wall: #f3f7ff; --lib-case: #e5edfc; --lib-case-shadow: #4a5e8f1a; --lib-door: #dee8fb;
   --lib-shelf-back: #d7e4f9; --lib-shelf-shade: #4a5e8f1a;
   --lib-band-dark: #223b6c; --lib-band-light: #f5f9fe;
@@ -172,8 +165,6 @@
   --world-book-1: #c4d5f3; --world-book-2: #dfe8f9; --world-book-3: #f3f7fe;
   --world-book-4: #2f508f; --world-book-5: #4567a8; --world-book-6: #f3b7cd;
   --world-highlight: #2e4a9b;
-  --shadow-contact: rgba(14, 22, 66, .26); --shadow-ambient: rgba(14, 22, 66, .18);
-  --shadow-inner: rgba(14, 22, 66, .24); --shadow-ink: rgb(14, 22, 66);
 }
 
 /* תפקידי הספרים: בכל המצבים מפנים למשבצות הצבע של העולם */
@@ -213,45 +204,13 @@ html, body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: var(--color-bg-page);
+  background: var(--stage-margin);
   font-family: var(--font-body);
   color: var(--color-text-primary);
 }
 
-/* שיפור 11.11: השוליים סביב הבמה (במסך 16:9) הם המשך של הקיר — באותו צבע עולם, עם אותו
-   "אור על הקיר" (multiply, באותו גודל ומרכז כמו בבמה), כך שאין פסים אפורים ואין תפר.
-   body מקבל את אותו data-mode כמו הבמה (main.js › setActive) */
-@property --shadow-ink { syntax: '<color>'; inherits: true; initial-value: rgb(27, 24, 22); }
-body {
-  --s: var(--stage-scale, 1);
-  background-color: var(--lib-wall);
-  background-image: radial-gradient(
-    calc(763.2px * var(--s)) calc(617px * var(--s)) at 50% calc(50% - 10px * var(--s)),
-    color-mix(in srgb, var(--shadow-ink) 0%, transparent) 0%,
-    color-mix(in srgb, var(--shadow-ink) 3%, transparent) 55%,
-    color-mix(in srgb, var(--shadow-ink) 16%, transparent) 100%);
-  background-blend-mode: multiply;
-  transition: background-color var(--motion-takeover) var(--ease-open), --shadow-ink var(--motion-takeover) var(--ease-open);
-}
-/* אריאל: הגריד על הקיר ממשיך גם מחוץ לבמה, באותם קווים בדיוק (x = -9.8 + 33.9k, y = 66.8 + 33.9k) */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--motion-revert) var(--ease-close);
-  --g: calc(33.9px * var(--s));
-  --w: calc(1.1px * var(--s));
-  background-image:
-    linear-gradient(to right, var(--world-a-grid) var(--w), transparent var(--w)),
-    linear-gradient(to bottom, var(--world-a-grid) var(--w), transparent var(--w));
-  background-size: var(--g) var(--g);
-  background-position:
-    calc(50vw - 720px * var(--s) - 9.8px * var(--s)) 0,
-    0 calc(50vh - 512px * var(--s) + 66.8px * var(--s));
-}
-body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeover) var(--ease-open) calc(var(--motion-takeover-spread) / 2); }
+/* עדכון 14.11: השוליים מחוץ לבמה 1440×1024 בצבע ניטרלי קבוע בכל המצבים (לא בצבע העולם ולא המשך הקיר).
+   קצה הבמה נשאר גלוי — אלה הגבולות שבהם הוגשה העבודה. רק מה שבתוך הבמה משתנה בין העולמות */
 
 .stage {
   position: absolute;
@@ -262,6 +221,7 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
   overflow: hidden;
   transform: translate(-50%, -50%) scale(var(--stage-scale, 1));
   background: var(--lib-wall);
+  box-shadow: 0 0 0 calc(1px / var(--stage-scale, 1)) var(--stage-edge);
   /* קצב הצביעה: ההשתלטות לאט, החזרה מהר */
   --paint-dur: var(--revert-each);
   --paint-ease: var(--ease-close);
@@ -341,6 +301,12 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
   100% { opacity: 0; scale: var(--crack-0); }
 }
 /* מה שבתוך הקרע מופיע רק אחרי שהוא נפתח; הקפל מתקפל החוצה */
+/* לינוי (14.11): הקרעים נפתחים מהראש שלה החוצה — עיגול חיתוך שגדל מהראש (clipPath #linoy-rip).
+   החשיפה הכללית של העולם נשארת; רק הקרעים נקרעים מהראש. מה שבתוכם (כוכבים, ספרים) מופיע אחרי */
+.rip-circle { r: 0; transition: r var(--revert-each) var(--ease-close); }
+.stage[data-mode="C"] .rip-circle { r: 1250px; transition: r var(--tear-rip) cubic-bezier(.3, .7, .4, 1) calc(var(--motion-takeover-spread) / 3); }
+.u-rip .tear-inner { opacity: 0; transition: opacity calc(var(--revert-each) / 2) ease-in; }
+.world.is-open .u-rip .tear-inner { opacity: 1; transition: opacity 400ms ease-out calc(var(--tear-rip) * 0.6); }
 .tear-inner { opacity: 0; transition: opacity calc(var(--revert-each) / 2) ease-in var(--d, 0ms); }
 .world.is-open .tear-inner {
   opacity: 1;
@@ -414,10 +380,10 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
   transform-box: view-box;
   transition: scale var(--motion-hover-open) ease-out;
 }
-/* ההצצה נראית בדיוק כמו hover (גדלה + המוח פועם), כך שהיא מלמדת מה יקרה כשמרחפים */
+/* רמז לפעולה (14.11): הדמות רק גדלה מעט וחוזרת — בלי לפתוח את הראש ובלי מוח */
 .char:is(.is-hover, .is-peek) { scale: var(--char-scale-hover); }
 
-/* החור בראש: סגור במצב רגיל (ראש שלם), נפתח ב-hover / בהצצה / כשהעולם שלה פתוח */
+/* החור בראש: סגור במצב רגיל (ראש שלם), נפתח ב-hover / כשהעולם שלה פתוח (לא ברמז) */
 .hole {
   transform-box: fill-box;
   transform-origin: center;
@@ -428,8 +394,7 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
     scale var(--motion-hover-open) var(--ease-close),
     opacity var(--motion-hover-open) var(--ease-close);
 }
-/* החור והמוח גדלו ×1.3 סביב המרכז שלהם (רכיב "דמות" בעמוד 06) */
-.char:is(.is-hover, .is-peek, .is-active) .hole {
+.char:is(.is-hover, .is-active) .hole {
   scale: var(--hole-scale-open);
   opacity: 1;
   pointer-events: auto;
@@ -446,7 +411,7 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
 }
 /* שיפור 11.11: כל הדמות לחיצה, ולכן המוח פועם כל עוד העכבר על הדמות (לא רק על המוח) —
    הפעימה היא ההזמנה ללחוץ. לחיצה בכל מקום על הדמות מועכת את המוח (משוב מיידי) */
-.char:is(.is-hover, .is-peek) .brain, .brain:hover { animation: brain-pulse var(--motion-brain-pulse) ease-in-out infinite; }
+.char.is-hover .brain, .brain:hover { animation: brain-pulse var(--motion-brain-pulse) ease-in-out infinite; }
 .char.is-press .brain, .brain:active { animation: none; scale: var(--brain-scale-press); }
 @keyframes brain-pulse {
   0%, 100% { scale: 1; }
@@ -456,11 +421,12 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
 /* ===== idle ומיקרו-אינטראקציות ===== */
 .layer-threads, .layer-text { pointer-events: none; }
 
-/* אריאל: נקודות זרימה לאורך החוטים */
+/* אריאל: נקודות זרימה לאורך החוטים — נקודות קטנות ובהירות שנעות בתוך החוט האדום.
+   קטנות מהחוט (1.4px מול 3.2px) ורחוקות זו מזו, כך שהאדום נשאר הצבע הדומיננטי (באג 14.11: החוטים נראו לבנים) */
 .flow {
   fill: none;
   stroke: var(--world-a-thread-backing);
-  stroke-width: var(--stroke-bold);
+  stroke-width: 1.4px;
   stroke-linecap: round;
   stroke-dasharray: 0 17.8;
   animation: flow var(--motion-ariel-flow) linear infinite;
@@ -487,17 +453,6 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
   transition:
     opacity var(--glow-fade) ease-out,
     scale var(--glow-fade) ease-out;
-}
-
-/* לינוי: גלים פועמים החוצה מהראש */
-.ripple {
-  transform-box: view-box;
-  transform-origin: 249px 640px;
-  animation: ripple var(--motion-linoy-ripple) ease-out var(--ripple-delay, 0s) infinite;
-}
-@keyframes ripple {
-  0% { scale: 1; opacity: 1; }
-  100% { scale: 1.15; opacity: 0; }
 }
 
 /* לינוי: כנפי הספרים */
@@ -541,7 +496,7 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
 .orbit .orbit-path { opacity: 1; }
 
 /* העולם הסגור לא מגיב ולא זז */
-.world:not(.is-open) :is(.flow, .wind, .ripple, .flap, .hover-float) { animation-play-state: paused; }
+.world:not(.is-open) :is(.flow, .wind, .flap, .hover-float) { animation-play-state: paused; }
 
 /* טקסט שרטוט בתוך העולם של אריאל */
 .world-text {
@@ -592,8 +547,8 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
   height: 58px;
   border-top: 10px solid var(--world-book-2);
   background: var(--obj-page);
-  /* ניסוי עומק/1 · מגע */
-  filter: drop-shadow(0 2px 1px var(--shadow-contact)) drop-shadow(0 6px 5px var(--shadow-ambient));
+  /* צל גזירי נייר (14.11) */
+  filter: var(--paper-cut-css);
   display: grid;
   place-items: center;
   font-family: var(--font-display);
@@ -641,14 +596,13 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
   border: 0;
   background: none;
   cursor: pointer;
-  /* ניסוי עומק/2 · רהיט */
-  filter: drop-shadow(0 3px 2px var(--shadow-contact)) drop-shadow(0 18px 20px var(--shadow-ambient));
+  /* צל גזירי נייר (14.11) */
+  filter: var(--paper-cut-css);
   transform: translateY(-100%);
   visibility: hidden;
   transition:
     transform var(--revert-each) var(--ease-close),
     height var(--motion-button-lift) ease-out,
-    filter var(--motion-button-lift) ease-out,
     visibility 0s linear var(--revert-each);
 }
 .stage.has-world .bookmark {
@@ -657,13 +611,9 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
   transition:
     transform var(--motion-takeover) var(--ease-open),
     height var(--motion-button-lift) ease-out,
-    filter var(--motion-button-lift) ease-out,
     visibility 0s;
 }
-.bookmark:hover, .bookmark:focus-visible {
-  height: 168px;
-  filter: drop-shadow(0 5px 3px var(--shadow-contact)) drop-shadow(0 26px 28px var(--shadow-ambient));
-}
+.bookmark:hover, .bookmark:focus-visible { height: 168px; }
 .bookmark:active { height: 144px; transition-duration: var(--motion-button-press); }
 .bookmark:focus-visible { outline: 3px solid var(--color-text-primary); outline-offset: 4px; }
 
@@ -725,8 +675,9 @@ body[data-mode="A"]::before { opacity: 1; transition: opacity var(--motion-takeo
 
 /* ===== הפחתת תנועה: כל ה-idle נעצר ===== */
 @media (prefers-reduced-motion: reduce) {
-  .flow, .wind, .ripple, .flap, .hover-float, .brain:hover { animation: none !important; }
+  .flow, .wind, .flap, .hover-float, .brain:hover { animation: none !important; }
   /* הקרעים: רק fade */
   .u-tear, .world.is-open .u-tear, .world.is-closing .u-tear { animation: none !important; scale: 1; }
+  .rip-circle, .stage[data-mode="C"] .rip-circle { r: 1250px; transition: none; }
   .char:is(.is-hover, .is-peek) { scale: 1; }
 }

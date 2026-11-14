@@ -317,8 +317,12 @@ const chars = {};  // id -> { groups: [body, hands], brain, button }
 function buildScene() {
   document.getElementById('scene-defs').innerHTML = F.defs + SCENE_DEFS;
 
+  // סדר ה-z כמו בפיגמה: ספרייה · עולם אריאל · עולם יעל · עולם לינוי · גופי הדמויות · שולחן · ידיים וחפץ.
+  // (נמדד 14.11: פיצול ל-SVG נפרדים לכל שכבה לא שיפר את קצב הפריימים — נשאר SVG אחד)
+  const layer = (name) => el('g', { class: `layer-${name}` }, scene);
+
   // 1. הספרייה, ועל הקיר שלה (אחרי 'קיר') שכבות ה-under של העולמות
-  const library = part('library', el('g', { class: 'layer-library' }, scene));
+  const library = part('library', layer('library'));
   const wall = library.querySelector('[data-n="קיר"]');
   // הקיר הוא רקע של כל הבמה, עד הקצה העליון (ולא רק של הספרייה המוזזת)
   wall.querySelectorAll('rect').forEach((r) => {
@@ -334,12 +338,12 @@ function buildScene() {
   }
   library.querySelector('[data-n="מנורה"]')?.classList.add('lamp-before');
 
-  // 2. העולמות מאחורי הדמויות (כולל החוטים של אריאל)
-  const back = el('g', { class: 'layer-worlds' }, scene);
-  for (const id of ['A', 'B', 'C']) if (WORLDS[id].back) buildWorldLayer(id, WORLDS[id].back, back);
+  // 2. העולמות מאחורי הדמויות (כולל החוטים של אריאל) — שכבה לכל עולם, כך שהרוח של יעל
+  //    או הזרימה של אריאל מציירות מחדש רק את העולם שלהן
+  for (const id of ['A', 'B', 'C']) if (WORLDS[id].back) buildWorldLayer(id, WORLDS[id].back, layer(`world-${id}`));
 
   // 3. גופי הדמויות + החור בראש
-  const bodies = el('g', { class: 'layer-bodies' }, scene);
+  const bodies = layer('bodies');
   // hover: הדמות גדלה ממרכז הבסיס שלה (על השולחן)
   const charOrigin = (g, id) => g.style.setProperty('transform-origin', `${CHARACTERS[id].boxX + 110}px 839px`);
   for (const id of ORDER) {
@@ -364,8 +368,8 @@ function buildScene() {
   }
 
   // 4. השולחן (עם חזית מלאה שמסתירה את הרגליים), 5. ידיים וחפץ
-  part('table', el('g', { class: 'layer-table' }, scene));
-  const hands = el('g', { class: 'layer-hands' }, scene);
+  part('table', layer('table'));
+  const hands = layer('hands');
   for (const id of ORDER) {
     const g = el('g', { class: 'char', 'data-char': id }, hands);
     charOrigin(g, id);
@@ -750,7 +754,7 @@ function bindEvents() {
   // כל תזוזה (גם בשוליים מחוץ לבמה), לחיצה או מקש = לא idle
   for (const type of ['pointermove', 'pointerdown', 'keydown']) window.addEventListener(type, noteActivity, { passive: true });
 
-  scene.addEventListener('pointermove', (event) => {
+  stage.addEventListener('pointermove', (event) => {
     cancelHint();   // המשתמשת כבר חוקרת — אין צורך ברמז
     const c = event.target.closest('.char');
     setHover(c ? c.dataset.char : null);
@@ -759,7 +763,7 @@ function bindEvents() {
     if (activeId === 'B') lightFlowers(x, y);
     if (activeId === 'C') { nearest(books, x, y, 'orbit'); spinDecor(x, y); }
   });
-  scene.addEventListener('pointerleave', () => {
+  stage.addEventListener('pointerleave', () => {
     setHover(null);
     threads?.leave();
     lightFlowers(-999, -999);
@@ -770,14 +774,14 @@ function bindEvents() {
   // לחיצה על כל הדמות פותחת את העולם שלה; לחיצה עליה כשהעולם שלה פתוח סוגרת;
   // לחיצה על דמות אחרת כשעולם פתוח = מעבר ישיר. משוב לחיצה: המוח נמעך מיד
   const release = () => Object.values(chars).forEach((c) => c.groups.forEach((g) => g.classList.remove('is-press')));
-  scene.addEventListener('pointerdown', (event) => {
+  stage.addEventListener('pointerdown', (event) => {
     const c = event.target.closest('.char');
     if (c) chars[c.dataset.char].groups.forEach((g) => g.classList.add('is-press'));
   });
   window.addEventListener('pointerup', release);
-  scene.addEventListener('pointerleave', release);
+  stage.addEventListener('pointerleave', release);
 
-  scene.addEventListener('click', (event) => {
+  stage.addEventListener('click', (event) => {
     const c = event.target.closest('.char');
     if (!c) return;
     const id = c.dataset.char;
@@ -806,6 +810,8 @@ function fitStage() {
 }
 
 function init() {
+  // בזמן הבנייה בלי מעברים: אחרת מאות עלים, פרחים ויחידות "מתכווצים" לאפס ברגע הטעינה (עבודה מיותרת)
+  stage.classList.add('is-building');
   buildScene();
   buildFrame();
   paintables = [...scene.querySelectorAll('.p'), ...document.querySelectorAll('.tag, .bookmark-ribbon')];
@@ -814,6 +820,8 @@ function init() {
   setupLinoy();
   setupLinoyDecor();
   paperShadows();   // אחרון: הצל הוא עותק של כל צורה, כולל המחלקות שנקבעו בשלבים הקודמים
+  getComputedStyle(scene.querySelector('.layer-bodies')).opacity;   // מחשב את המצב ההתחלתי לפני שמחזירים את המעברים
+  stage.classList.remove('is-building');
   bindEvents();
   fitStage();
   startPeek();

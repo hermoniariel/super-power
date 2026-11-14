@@ -240,6 +240,8 @@ html, body {
   height: 100%;
   overflow: hidden;
 }
+/* בזמן הבנייה (main.js › init): בלי מעברים, כדי שהמצב ההתחלתי לא "יתנפש" בטעינה */
+.stage.is-building * { transition: none !important; }
 
 /* כל צורה צבועה משנה צבע במקומה, בהשהיה אקראית משלה (--d נקבע ב-main.js) */
 .p {
@@ -254,8 +256,11 @@ html, body {
   inset: 0;
   pointer-events: none;
   opacity: var(--paper-grain-strength);
+  /* אותו פילטר בדיוק כמו קודם (fractalNoise 0.85, 2 אוקטבות, seed 7, צבע --prim-ink-900), אבל כתמונה:
+     הדפדפן מצייר אותה פעם אחת ושומר, במקום לחשב רעש על כל המסך בכל פריים */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='1024'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='7' stitchTiles='stitch' result='noise'/%3E%3CfeColorMatrix in='noise' type='matrix' result='speckle' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0 0 0 -0.8'/%3E%3CfeFlood flood-color='%231a1917' result='ink'/%3E%3CfeComposite in='ink' in2='speckle' operator='in'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 1440px 1024px;
 }
-.grain-ink { flood-color: var(--color-line-strong); }
 
 /* ===== עולמות: יחידות שמשתנות במקום =====
    כל יחידה (חוט, צומת, ענף, קרע, ספר...) מקבלת השהיה אקראית בטווח takeover-spread.
@@ -419,7 +424,6 @@ html, body {
 }
 
 /* ===== idle ומיקרו-אינטראקציות ===== */
-.layer-threads, .layer-text { pointer-events: none; }
 
 /* אריאל: נקודות זרימה לאורך החוטים — נקודות קטנות ובהירות שנעות בתוך החוט האדום.
    קטנות מהחוט (1.4px מול 3.2px) ורחוקות זו מזו, כך שהאדום נשאר הצבע הדומיננטי (באג 14.11: החוטים נראו לבנים) */
@@ -434,7 +438,10 @@ html, body {
 @keyframes flow { to { stroke-dashoffset: -178; } }
 
 /* יעל: רוח. כל ענף מסתובב סביב הראש שלה */
+/* ביצועים (נמדד 14.11): כל ענף על משטח ציור משלו — הרוח מסובבת אותו בלי לצייר מחדש את 800 הצורות של העולם
+   (מנוחה בעולם של יעל: 52 → 60 פריימים לשנייה) */
 .wind {
+  will-change: transform;
   transform-box: view-box;
   transform-origin: 720px 552px;
   animation: wind var(--wind-dur, 2.4s) ease-in-out var(--wind-delay, 0s) infinite alternate;

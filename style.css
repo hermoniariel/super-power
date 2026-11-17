@@ -55,8 +55,8 @@
   --motion-yael-glow: 300ms;
   --motion-linoy-flap: 2000ms;
   --motion-linoy-orbit: 300ms;
-  --motion-linoy-spin: 600ms;     /* כוכב/ספירלה/שמש: סיבוב שלם בכניסה לטווח */
-  --linoy-spin-radius: 220px;
+  --motion-hint-lift: 400ms;      /* רמז (16.11): הדמות מתרוממת מהדף */
+  --motion-tag-swap: 180ms;       /* התג מתחלף ל"מה אני רואה?" (150–200) */
 
   /* סצנה · לפי עולם — מצב "לפני" */
   --lib-wall: #edebe8; --lib-case: #d6d4d1; --lib-case-shadow: #1b19161a; --lib-door: #c6c4c1;
@@ -79,7 +79,7 @@
   --c-tip-1: #53524f; --c-tip-2: #7f7e7b; --c-hand: #a8a6a4;
 
   /* עולם אריאל */
-  --world-a-thread-backing: #fffbfa; --world-a-grid: #fce5e2;
+  --world-a-thread-backing: #fffbfa;
   /* עולם יעל */
   --yael-branch: #3c6124; --yael-branch-halo: #fffaec; --yael-leaf-1: #416b25; --yael-leaf-2: #5d7627;
   --yael-bloom: #fef8ea; --yael-bloom-center: #a0600a; --yael-light: #fff1cd; --yael-light-2: #ffe1a3;
@@ -98,7 +98,10 @@
   /* ===== ערכים מקומיים (אין להם משתנה ב-Figma) ===== */
   --brain-scale-hover: 1.06;     /* פעימת המוח (טבלת התנועה) */
   --brain-scale-press: 0.92;
-  --peek-hold: 1200ms;           /* הצצה: פתיחה 300 → המתנה 1200 → סגירה 300 (היה 600) */
+  --peek-hold: 900ms;            /* רמז: עלייה 400 → החזקה קצרה → חזרה 400 */
+  --hint-lift: -4px;             /* רמז: הדמות מתרוממת 4px */
+  --hint-shadow: drop-shadow(2px 6px 10px rgba(0, 0, 0, .22));   /* רמז: הצל מעמיק */
+  --tag-scale-hover: 1.15;       /* hover: התג גדל מהמרכז התחתון */
   --peek-hover-intent: 500ms;    /* hover קצר מזה לא נחשב אינטראקציה */
   --motion-peek-idle: 6000ms;    /* אחרי אינטראקציה: ההצצה חוזרת רק אחרי כך וכך בלי תזוזה */
   --char-scale-hover: 1.04;      /* hover: הדמות גדלה */
@@ -167,26 +170,28 @@
   --world-highlight: #2e4a9b;
 }
 
-/* תפקידי הספרים: בכל המצבים מפנים למשבצות הצבע של העולם */
-:root {
-  --lib-book-mid-1: var(--world-book-1); --lib-book-mid-2: var(--world-book-2); --lib-book-mid-3: var(--world-book-3);
-  --lib-book-mid-4: var(--world-book-4); --lib-book-mid-5: var(--world-book-5); --lib-book-mid-6: var(--world-book-6);
-  --lib-book-light-1: var(--world-book-1); --lib-book-light-2: var(--world-book-2); --lib-book-light-3: var(--world-book-3);
-  --lib-book-light-4: var(--world-book-4); --lib-book-light-5: var(--world-book-5); --lib-book-light-6: var(--world-book-6);
-  --lib-book-dark-1: var(--world-book-1); --lib-book-dark-2: var(--world-book-2); --lib-book-dark-3: var(--world-book-3);
-  --lib-book-dark-4: var(--world-book-4); --lib-book-dark-5: var(--world-book-5); --lib-book-dark-6: var(--world-book-6);
-  --lib-book-ink-1: var(--world-book-1); --lib-book-ink-2: var(--world-book-2); --lib-book-ink-3: var(--world-book-3);
-  --lib-book-ink-4: var(--world-book-4); --lib-book-ink-5: var(--world-book-5); --lib-book-ink-6: var(--world-book-6);
-}
-.stage[data-mode] {
-  --lib-book-mid-1: var(--world-book-1); --lib-book-mid-2: var(--world-book-2); --lib-book-mid-3: var(--world-book-3);
-  --lib-book-mid-4: var(--world-book-4); --lib-book-mid-5: var(--world-book-5); --lib-book-mid-6: var(--world-book-6);
-  --lib-book-light-1: var(--world-book-1); --lib-book-light-2: var(--world-book-2); --lib-book-light-3: var(--world-book-3);
-  --lib-book-light-4: var(--world-book-4); --lib-book-light-5: var(--world-book-5); --lib-book-light-6: var(--world-book-6);
-  --lib-book-dark-1: var(--world-book-1); --lib-book-dark-2: var(--world-book-2); --lib-book-dark-3: var(--world-book-3);
-  --lib-book-dark-4: var(--world-book-4); --lib-book-dark-5: var(--world-book-5); --lib-book-dark-6: var(--world-book-6);
-  --lib-book-ink-1: var(--world-book-1); --lib-book-ink-2: var(--world-book-2); --lib-book-ink-3: var(--world-book-3);
-  --lib-book-ink-4: var(--world-book-4); --lib-book-ink-5: var(--world-book-5); --lib-book-ink-6: var(--world-book-6);
+/* תפקידי הספרים (17.11): הספרים נסוגים לרקע — מתערבבים עם צבע גב המדף.
+   נמדד בפריימים 01, 03, 04, 05 (overrides על המופעים): בכל המצבים, בכל 6 הצבעים,
+   ספר = 40% צבע הספר + 60% גב המדף (סטייה ≤2%). מוגדר על .stage כדי שיחושב מחדש בכל עולם */
+.stage {
+  --book-mix: 40%;
+  --book-1: color-mix(in srgb, var(--world-book-1) var(--book-mix), var(--lib-shelf-back));
+  --book-2: color-mix(in srgb, var(--world-book-2) var(--book-mix), var(--lib-shelf-back));
+  --book-3: color-mix(in srgb, var(--world-book-3) var(--book-mix), var(--lib-shelf-back));
+  --book-4: color-mix(in srgb, var(--world-book-4) var(--book-mix), var(--lib-shelf-back));
+  --book-5: color-mix(in srgb, var(--world-book-5) var(--book-mix), var(--lib-shelf-back));
+  --book-6: color-mix(in srgb, var(--world-book-6) var(--book-mix), var(--lib-shelf-back));
+  /* הפסים על גב הספרים ("פס כהה" / "פס בהיר"): אותו ערבוב (נמדד בפריימים 01/03/04/05) */
+  --book-band-dark: color-mix(in srgb, var(--lib-band-dark) var(--book-mix), var(--lib-shelf-back));
+  --book-band-light: color-mix(in srgb, var(--lib-band-light) var(--book-mix), var(--lib-shelf-back));
+  --lib-book-mid-1: var(--book-1); --lib-book-mid-2: var(--book-2); --lib-book-mid-3: var(--book-3);
+  --lib-book-mid-4: var(--book-4); --lib-book-mid-5: var(--book-5); --lib-book-mid-6: var(--book-6);
+  --lib-book-light-1: var(--book-1); --lib-book-light-2: var(--book-2); --lib-book-light-3: var(--book-3);
+  --lib-book-light-4: var(--book-4); --lib-book-light-5: var(--book-5); --lib-book-light-6: var(--book-6);
+  --lib-book-dark-1: var(--book-1); --lib-book-dark-2: var(--book-2); --lib-book-dark-3: var(--book-3);
+  --lib-book-dark-4: var(--book-4); --lib-book-dark-5: var(--book-5); --lib-book-dark-6: var(--book-6);
+  --lib-book-ink-1: var(--book-1); --lib-book-ink-2: var(--book-2); --lib-book-ink-3: var(--book-3);
+  --lib-book-ink-4: var(--book-4); --lib-book-ink-5: var(--book-5); --lib-book-ink-6: var(--book-6);
 }
 
 /* דמויות — "צבעוני": זהה בכל העולמות */
@@ -196,6 +201,19 @@
   --c-hair: #2f241f; --c-skin: #ddb290; --c-cloth: #325392; --c-cloth-over: #00000000; --c-brows: #2f241f;
   --c-septum: #c9c4bc; --c-septum-over: #00000000; --c-tip-1: #654c38; --c-tip-2: #9c7552; --c-hand: #c99c7a;
 }
+
+/* דמויות לא פעילות (17.11): בכל עולם, שתי הדמויות שהעולם לא שלהן בפלטת העולם.
+   הערכים מה-overrides על המופעים בפריימים 03 (392:8407), 04 (392:8479), 05 (392:8551).
+   ב-hover הדמות חוזרת לצבעים המלאים שלה (ה-:not(.is-hover)) */
+.stage[data-mode="A"] .char[data-char="B"]:not(.is-hover) { --b-hair: #eac1ac; --b-skin: #f9e6db; --b-cloth: #bdb8a2; --b-freckle: #ebc7b8; }
+.stage[data-mode="A"] .char[data-char="C"]:not(.is-hover) { --c-hair: #b49590; --c-brows: #b49590; --c-skin: #f2d7c9; --c-cloth: #b5aabd; --c-tip-2: #dabbac; --c-hand: #ebcdbf; }
+.stage[data-mode="B"] .char[data-char="A"]:not(.is-hover) { --a-hair: #e5c69c; --a-skin: #f9dfc6; --a-tattoo: #b7a180; --a-cloth: #e0a789; --a-glasses: #b19b78; }
+.stage[data-mode="B"] .char[data-char="C"]:not(.is-hover) { --c-hair: #b39a77; --c-brows: #b39a77; --c-skin: #f2d8bb; --c-cloth: #b4aea7; --c-tip-2: #dabd99; --c-hand: #ebceaf; }
+.stage[data-mode="C"] .char[data-char="A"]:not(.is-hover) { --a-hair: #d3c8be; --a-skin: #ece0df; --a-tattoo: #9ca3b1; --a-cloth: #caa9b3; --a-glasses: #969dac; }
+.stage[data-mode="C"] .char[data-char="B"]:not(.is-hover) { --b-hair: #d8c5bd; --b-skin: #eee7e5; --b-cloth: #a6beb7; --b-freckle: #d9cbc8; }
+/* אחרי שהמעבר לעולם נגמר (main.js › is-settled): hover מחליף צבעים מיד, באותו תזמון של פתיחת הראש */
+.stage.is-settled .char { --paint-dur: var(--motion-hover-open); --paint-ease: ease-out; }
+.stage.is-settled .char .p { --d: 0ms !important; }
 
 /* ===== בסיס ===== */
 * { box-sizing: border-box; }
@@ -383,10 +401,15 @@ html, body {
 .char {
   cursor: pointer;
   transform-box: view-box;
-  transition: scale var(--motion-hover-open) ease-out;
+  transition:
+    scale var(--motion-hover-open) ease-out,
+    translate var(--motion-hint-lift) ease-out,
+    filter var(--motion-hint-lift) ease-out;
 }
-/* רמז לפעולה (14.11): הדמות רק גדלה מעט וחוזרת — בלי לפתוח את הראש ובלי מוח */
-.char:is(.is-hover, .is-peek) { scale: var(--char-scale-hover); }
+.char.is-hover { scale: var(--char-scale-hover); }
+/* רמז לפעולה (16.11): הדמות מתרוממת מהדף 4px והצל מעמיק — בלי לפתוח את הראש ובלי מוח.
+   התג מתחלף ל"מה אני רואה?" באותו זמן (.tag.is-peek) */
+.char.is-peek:not(.is-hover) { translate: 0 var(--hint-lift); filter: var(--hint-shadow); }
 
 /* החור בראש: סגור במצב רגיל (ראש שלם), נפתח ב-hover / כשהעולם שלה פתוח (לא ברמז) */
 .hole {
@@ -490,15 +513,6 @@ html, body {
 .orbit .book-tilt { rotate: -18deg; scale: 1.12; } /* הוגדל 10.11: היה -10deg */
 .book-tilt { transition: rotate var(--motion-linoy-orbit) ease-out, scale var(--motion-linoy-orbit) ease-out; }
 
-/* לינוי: כוכבים, ספירלות ושמשות — כניסת העכבר לטווח = סיבוב שלם במקום (סבב באגים 11.11).
-   ה-<g class="spin"> עוטף כל צורה ואת רצועת הנייר שלה, ושניהם מקבלים אותו --spin */
-.spin {
-  transform-box: fill-box;
-  transform-origin: center;
-  rotate: var(--spin, 0deg);
-  transition: rotate var(--motion-linoy-spin) cubic-bezier(.2, 1.3, .4, 1);
-}
-@media (prefers-reduced-motion: reduce) { .spin { transition: none; rotate: none; } }
 .orbit-path { transition: opacity var(--motion-linoy-orbit) ease-out; }
 .orbit .orbit-path { opacity: 1; }
 
@@ -526,6 +540,7 @@ html, body {
   pointer-events: none;
 }
 /* מסך 35:3: שורה עליונה קטנה, "אנחנו רואות מה שמתחת." גדולה ומודגשת */
+/* רכיב "כותרת" (389:23230): שורה 1 SemiBold 30, שורה 2 Medium 56 עם "ראש פתוח" ב-SemiBold. -1.5%, 118% */
 .headline .line1 {
   display: block;
   font-size: 30px;
@@ -536,8 +551,9 @@ html, body {
   display: block;
   font-size: 56px;
   font-weight: 500;
+  letter-spacing: -0.015em;
 }
-/* "מה שמתחת": ב"לפני" בצבע הטקסט, בעולם בצבע ההדגשה של העולם — באותו תזמון כמו צביעת העולם */
+/* "ראש פתוח": ב"לפני" בצבע הטקסט, בעולם בצבע העולם (אותו משתנה של הסימנייה) — באותו תזמון כמו צביעת העולם */
 .headline .line2 strong {
   font-weight: 600;
   color: var(--color-text-primary);
@@ -559,13 +575,29 @@ html, body {
   display: grid;
   place-items: center;
   font-family: var(--font-display);
-  font-size: 24px;
   font-weight: 500;
   color: var(--color-text-primary);
+  /* hover: התג גדל ×1.15 מהמרכז התחתון שלו (רוחב קבוע 136) */
+  transform-origin: 50% 100%;
   transition:
     border-color var(--paint-dur) var(--paint-ease),
-    background-color var(--paint-dur) var(--paint-ease);
+    background-color var(--paint-dur) var(--paint-ease),
+    color var(--paint-dur) var(--paint-ease),
+    scale var(--motion-hover-open) ease-out;
 }
+.tag.is-hover { scale: var(--tag-scale-hover); }
+/* פעיל (בעולם שלה): הטקסט בצבע העולם — אותו משתנה של הסימנייה ושל "ראש פתוח" */
+.tag.is-active { color: var(--world-highlight); }
+/* שם / "מה אני רואה?": אותו תא, מעבר טקסט קצר. 21px → ×1.15 = 24px בתג המוגדל, בלי לגעת בשוליים */
+.tag-name, .tag-ask {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+  transition: opacity var(--motion-tag-swap) ease-out;
+}
+.tag-name { font-size: 24px; }
+.tag-ask { font-size: 21px; opacity: 0; }
+.tag:is(.is-hover, .is-peek) .tag-name { opacity: 0; }
+.tag:is(.is-hover, .is-peek) .tag-ask { opacity: 1; }
 
 /* שם הכוח: גדול במרכז, נחשף רק בעולם */
 .power {
@@ -647,24 +679,28 @@ html, body {
   height: 1.5px;
   background: var(--color-bg-page);
 }
+/* 17.11: שורה אחת, "לספרייה" עם החץ. החץ והתווית צמודים לתחתית הסרט — כשהסימנייה נשלפת (hover 168)
+   הם יורדים איתה, כמו ברכיב (חץ y=40→58, תווית y=74→92) */
 .bookmark-arrow {
   position: absolute;
-  top: 40px;
+  bottom: 82px;
   left: 30px;
   width: 28px;
   height: 28px;
   overflow: visible;
 }
-.bookmark-label, .bookmark-sub {
+.bookmark-label {
   position: absolute;
+  bottom: 52px;
   left: 0;
   width: 100%;
   text-align: center;
   font-family: var(--font-display);
   color: var(--color-bg-page);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
 }
-.bookmark-label { top: 74px; font-size: 18px; font-weight: 600; line-height: 24px; }
-.bookmark-sub { top: 98px; font-size: 14px; font-weight: 500; line-height: 20px; }
 
 /* ===== נגישות: כפתור שקוף לכל דמות (מקלדת וקורא מסך בלבד) ===== */
 .hit { position: absolute; inset: 0; pointer-events: none; }
@@ -686,5 +722,6 @@ html, body {
   /* הקרעים: רק fade */
   .u-tear, .world.is-open .u-tear, .world.is-closing .u-tear { animation: none !important; scale: 1; }
   .rip-circle, .stage[data-mode="C"] .rip-circle { r: 1250px; transition: none; }
-  .char:is(.is-hover, .is-peek) { scale: 1; }
+  .char.is-hover { scale: 1; }
+  .char.is-peek { translate: none; filter: none; }
 }

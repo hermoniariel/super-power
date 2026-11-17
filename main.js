@@ -7,8 +7,8 @@
    'קיר' קיר הספרייה · 'ארון' הספרייה עצמה · 'מנורה' המנורה הרגילה (רק בלפני) · 'חור בראש' החור · 'מוח' המוח
    'חוט NN' חוט של אריאל ('רצועת נייר' + 'חוט', קו שבור דרך הצמתים) · 'צומת NN' צומת · 'מספור מדפים'
    'מגירת קטלוג' · 'חלון אור' · 'ענף N' · 'לב פרח' · 'הילת מנורה' · 'מנורת צבעוני'
-   'לינוי · קרעים' ('שפת נייר קרועה' + 'חלל' + 'כוכבים' + 'ספר מעופף') · 'סימנים · רצועת נייר' (פיסת הנייר של כל סימן)
-   'כוכבים' / 'ספירלות' / 'שמשות' · 'ספר מעופף' ('ספר-ציפור' + 'מסלול') · 'חלון קרוע' (הארון התחתון של לינוי) */
+   'לינוי · קרעים' ('שפת נייר קרועה' + 'חלל' + 'כוכבים' + 'ספר מעופף') · 'ספר מעופף' ('ספר-ציפור' + 'מסלול')
+   'לינוי · מנורה מרחפת' (17.11, במקום השעון הנמס) */
 
 const F = window.FIGMA;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -33,11 +33,12 @@ const HINT_ORDER = ['A', 'B', 'C'];  // רמז לפעולה: אריאל, יעל,
    units: [בורר, סוג]. סוגים: fade · pop · rip (קרע שנפתח מהראש) · stretch · draw (הקו נמתח) · drawer · branch */
 const WORLDS = {
   A: {
-    under: [{ part: 'aGrid', units: [[':scope > *', 'fade']] }],
+    // 17.11: בלי גריד על הקיר ובלי קווי עזר מקווקווים (נמחקו מהפיגמה ומהאתר).
+    // המידות 1248/584 — רק כשהדגל ב-content.js (worlds.A.showDimensions) דולק
     back: [
       { part: 'aDrawers', units: [['[data-n="מגירת קטלוג"]', 'drawer']] },
       { part: 'aLamp', units: [[':scope > :not(text)', 'pop'], ['text', 'fade']] },
-      { part: 'aDims', units: [[':scope > *', 'stretch']] },
+      ...(CONTENT.worlds.A.showDimensions ? [{ part: 'aDims', units: [[':scope > *', 'stretch']] }] : []),
       {
         part: 'aThreads',
         units: [['[data-n^="חוט "]', 'draw'], ['[data-n^="צומת"]', 'pop'], ['[data-n="מספור מדפים"] > g', 'fade']],
@@ -52,15 +53,32 @@ const WORLDS = {
     ],
   },
   C: {
-    // סדר השכבות כמו בספרייה ב-Figma: השעון, הסימנים, הקרעים.
-    // הארון התחתון: בלי קרעים, כמו בפיגמה (הקרע הישן מאחורי יעל הוסר 14.11)
+    // 17.11: בלי שעון נמס ובלי כוכבים/ספירלות/שמשות. הקרעים חושפים חלל, ומהם עפים ספרים.
+    // הארון התחתון: שלם, בלי קרעים, כמו בפיגמה
     back: [
-      { part: 'cClock', units: [[':scope', 'pop']] },
-      { part: 'cDecor', units: [['[data-n="סימן"]', 'pop']] },
       { part: 'cTearsNew', units: [[':scope', 'rip']] },
+    ],
+    // בקואורדינטות הבמה (לא בתוך הספרייה): המנורה המרחפת ושני הספרים שמחוץ לקרעים (מסך 05)
+    stage: [
+      { part: 'cLampFloat', units: [[':scope', 'pop']] },
+      { part: 'cBooksFree', units: [['[data-n="ספר מעופף"]', 'pop']] },
     ],
   },
 };
+
+/* ===== פריסת הספרייה (17.11, מסכי "ראש פתוח" בעמוד 05) =====
+   החלקים ב-figma-parts.js יוצאו בפריסה הישנה: סקייל 1.06 סביב (720,176) והזזה של 44px.
+   במסכים החדשים הספרייה ושכבות העולם בגודל 1:1, ב-y=79. המטריצה ממירה מהישנה לחדשה
+   (נמדד: צמתי החוטים במסך 03 מול האתר). הדמויות, הידיים, השולחן והתגים — בלי שינוי */
+const WORLD_K = 1 / 1.06;
+const WORLD_E = 720 * (1 - WORLD_K);
+const WORLD_F = 255 - 220 * WORLD_K;
+const WORLD_MATRIX = `matrix(${WORLD_K} 0 0 ${WORLD_K} ${WORLD_E} ${WORLD_F})`;
+const toWorld = (x, y) => ({ x: (x - WORLD_E) / WORLD_K, y: (y - WORLD_F) / WORLD_K });
+
+/* אריאל: החוטים והצמתים יוצאים ממרכז הראש (רכיב 395:23241, גרסה = חוטים ממורכזים):
+   27.5px ימינה ברכיב = 27.5 × 1.06 ביחידות הייצוא. המספור 01–03 לא זז */
+const THREAD_SHIFT = 27.5 * 1.06;
 
 /* טקסט בתוך העולם של אריאל: מתוך content.js, לפי הסדר.
    aDims: מיקום מה-Figma (box = [x, y, w, h]); aThreads, aLamp: הטקסט כבר במקומו בייצוא, רק התוכן מ-content.js */
@@ -131,49 +149,68 @@ function placeTexts(key, root) {
   });
 }
 
-// מרכז של צורה על המסך (להשוואת מרחקים בלבד)
-const screenCenter = (n) => { const r = n.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
-
 /* תיקונים אחרי הייבוא */
-const GRID_STEP = 33.9;
+// הספרייה בקואורדינטות הייצוא שמכסות את כל הבמה (אחרי WORLD_MATRIX): 0..1440 × 0..1024 ועוד שוליים
+const WORLD_COVER = { x0: -60, x1: 1500, y0: -60, y1: 1140 };
 const CLEANUP = {
-  // איזון צפיפות: בלי קווי הבנייה המקווקווים על הקיר
-  aDims: (root) => root.querySelectorAll(':scope > rect[opacity="0.35"]').forEach((r) => r.remove()),
-  // הגריד ממשיך עד הקצה העליון של הבמה (כרקע של כל ה-stage, לא רק של הספרייה המוזזת)
-  aGrid: (root) => {
-    const rects = [...root.querySelectorAll('rect')];
-    rects.filter((r) => Number(r.getAttribute('width')) < 2).forEach((r) => { r.setAttribute('y', 0); r.setAttribute('height', 1120); });
-    const rows = rects.filter((r) => Number(r.getAttribute('height')) < 2);
-    const first = rows.reduce((a, b) => (Number(a.getAttribute('y')) < Number(b.getAttribute('y')) ? a : b));
-    for (let y = Number(first.getAttribute('y')) - GRID_STEP; y > -GRID_STEP; y -= GRID_STEP) {
-      const r = first.cloneNode();
-      r.setAttribute('y', Math.round(y * 10) / 10);
-      first.before(r);
+  // לינוי (17.11): ברכיב "לינוי · קרעים" (343:7268) כבר אין את הקרעים הקטנים ברקע.
+  // הייצוא הישן מכיל 6 תת-צורות נוספות בשפת הנייר ובחלל — משאירים רק את מה שיש בפיגמה (TEAR_SHAPES)
+  cTearsNew: (root) => {
+    for (const name of ['שפת נייר קרועה', 'חלל']) {
+      const path = root.querySelector(`[data-n="${name}"] path`);
+      const [tx, ty] = path.closest('[transform]').getAttribute('transform').match(/[-\d.]+/g).map(Number);
+      const keep = path.getAttribute('d').split(/(?=M)/).filter((sub) => {
+        const probe = el('path', { d: sub }, path.parentNode);
+        const b = probe.getBBox();
+        probe.remove();
+        const box = [b.x + tx, b.y + ty, b.x + b.width + tx, b.y + b.height + ty];
+        return TEAR_SHAPES[name].some((f) => f.every((v, i) => Math.abs(v - box[i]) <= 3));
+      });
+      path.setAttribute('d', keep.join(''));
     }
   },
-  // לינוי: כל סימן (כוכב / ספירלה / שמש) יחד עם פיסת הנייר שלו בקבוצה אחת —
-  // כך שהם מסתובבים יחד סביב אותו מרכז בדיוק. ה-<g class="spin"> הפנימי מסתובב, ה-<g> החיצוני הוא יחידת ההשתלטות
-  cDecor: (root) => {
-    const strips = [...root.querySelectorAll('[data-n="סימנים · רצועת נייר"] > *')].map((n) => ({ n, c: screenCenter(n) }));
-    const stripsGroup = root.querySelector('[data-n="סימנים · רצועת נייר"]');
-    const marks = [...root.querySelectorAll('[data-n="כוכבים"] > *, [data-n="ספירלות"] > *, [data-n="שמשות"] > *')];
-    for (const m of marks) {
-      const c = screenCenter(m);
-      let best = null;
-      let bestD = Infinity;
-      for (const s of strips) {
-        const d = Math.hypot(s.c.x - c.x, s.c.y - c.y);
-        if (!s.used && d < bestD) { best = s; bestD = d; }
-      }
-      const unit = el('g', { 'data-n': 'סימן' });
-      const spin = el('g', { class: 'spin' }, unit);
-      if (best) { best.used = true; spin.append(best.n); }
-      spin.append(m);
-      stripsGroup.before(unit);
-    }
-    root.querySelectorAll('[data-n="סימנים · רצועת נייר"], [data-n="כוכבים"], [data-n="ספירלות"], [data-n="שמשות"]').forEach((g) => g.remove());
-  },
+  ...Object.fromEntries([1, 2, 3, 4, 5].map((i) => [`bBranch${i}`, resizeFlowers])),
 };
+
+// הצורות שיש היום ברכיב "לינוי · קרעים" (fillGeometry של 343:7269 / 343:7314), בקואורדינטות הייצוא
+const TEAR_SHAPES = {
+  'שפת נייר קרועה': [[272, 287, 1346, 656], [68, 240, 1057, 621], [606, 459, 610, 460], [596, 458, 602, 459], [1014, 367, 1017, 369]],
+  'חלל': [[274, 291, 1340, 652], [74, 411, 231, 617], [182, 245, 1056, 615], [582, 454, 583, 455], [233, 401, 247, 419]],
+};
+
+/* יעל (17.11): הפרחים בפיגמה (מסך 04, 392:8479) גדולים פי ~1.53 מהייצוא, וכל פרח זז מעט כדי להישאר בקצה הענף.
+   FLOWERS = מרכז "לב פרח" של כל אחד מ-12 הפרחים בפיגמה, בקואורדינטות הייצוא, וגודל הלב (11.5).
+   כל פרח (לב + עלי הכותרת שלו) מוגדל סביב המרכז שלו ומוזז למרכז שבפיגמה */
+const FLOWER_HEART = 11.5;
+const FLOWERS = [
+  [291.3, 247.1], [427.7, 345.4], [719.7, 240.8], [616.8, 357.2], [1078.4, 250.4], [1349.8, 374.5],
+  [870.8, 389.2], [1252.9, 247.6], [1367, 555.1], [121.3, 431.1], [79.7, 564.4], [170.8, 389.4],
+];
+let flowerScale = 1;
+function localCenter(p) {
+  const b = p.getBBox();
+  const m = p.transform.baseVal.consolidate()?.matrix;
+  const x = b.x + b.width / 2;
+  const y = b.y + b.height / 2;
+  return m ? { x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f, w: b.width * Math.hypot(m.a, m.b) } : { x, y, w: b.width };
+}
+function resizeFlowers(root) {
+  const hearts = [...root.querySelectorAll('[data-n="לב פרח"] > path')].map((p) => {
+    const c = localCenter(p);
+    const target = FLOWERS.reduce((a, f) => (Math.hypot(f[0] - c.x, f[1] - c.y) < Math.hypot(a[0] - c.x, a[1] - c.y) ? f : a));
+    return { p, c, target, k: FLOWER_HEART / c.w, parts: [p] };
+  });
+  if (!hearts.length) return;
+  root.querySelectorAll('[data-n="גב פרח"] > path, [data-n="עלי כותרת"] > path').forEach((p) => {
+    const c = localCenter(p);
+    hearts.reduce((a, h) => (Math.hypot(h.c.x - c.x, h.c.y - c.y) < Math.hypot(a.c.x - c.x, a.c.y - c.y) ? h : a)).parts.push(p);
+  });
+  for (const h of hearts) {
+    flowerScale = h.k;
+    const pre = `translate(${h.target[0]} ${h.target[1]}) scale(${h.k.toFixed(4)}) translate(${-h.c.x.toFixed(2)} ${-h.c.y.toFixed(2)})`;
+    for (const p of h.parts) p.setAttribute('transform', `${pre} ${p.getAttribute('transform') || ''}`.trim());
+  }
+}
 
 const worldGroups = { A: [], B: [], C: [] };
 const units = { A: [], B: [], C: [] };
@@ -273,7 +310,6 @@ const SHADOW_SCOPES = [
   '[data-part="library"] [data-n="ארון"]', '.lamp-before',
   '[data-part^="body"]', '[data-part^="hole"] [data-n="מוח"]', '[data-part^="hands"]', '[data-part="table"]',
   '[data-part="aDrawers"]', '[data-part="bWindows"]', '[data-part="bTulip"]', '[data-part^="bBranch"]',
-  '[data-part="cClock"]',
 ];
 const SHADOW_SHAPES = 'path, rect, circle, ellipse, polygon';
 const SHADOW_OFFSET = { '[data-part^="hole"]': 1.3 };   // החור מוקטן ×1/1.3 ב-CSS: ההיסט על המסך נשאר 1px
@@ -321,26 +357,34 @@ function buildScene() {
   // (נמדד 14.11: פיצול ל-SVG נפרדים לכל שכבה לא שיפר את קצב הפריימים — נשאר SVG אחד)
   const layer = (name) => el('g', { class: `layer-${name}` }, scene);
 
-  // 1. הספרייה, ועל הקיר שלה (אחרי 'קיר') שכבות ה-under של העולמות
-  const library = part('library', layer('library'));
+  // 1. הספרייה. הקיר חלק בכל העולמות (17.11: בלי גריד ובלי דוגמה)
+  const libraryLayer = layer('library');
+  libraryLayer.setAttribute('transform', WORLD_MATRIX);
+  const library = part('library', libraryLayer);
   const wall = library.querySelector('[data-n="קיר"]');
-  // הקיר הוא רקע של כל הבמה, עד הקצה העליון (ולא רק של הספרייה המוזזת)
+  // הקיר הוא רקע של כל הבמה, עד הקצה העליון (ולא רק של הספרייה)
   wall.querySelectorAll('rect').forEach((r) => {
-    r.setAttribute('x', 0); r.setAttribute('y', 0); r.setAttribute('width', 1440); r.setAttribute('height', 1024);
+    r.setAttribute('x', WORLD_COVER.x0); r.setAttribute('y', WORLD_COVER.y0);
+    r.setAttribute('width', WORLD_COVER.x1 - WORLD_COVER.x0); r.setAttribute('height', WORLD_COVER.y1 - WORLD_COVER.y0);
   });
-  let anchor = wall;
-  for (const id of ['A', 'B', 'C']) {
-    if (!WORLDS[id].under) continue;
-    const g = el('g');
-    anchor.after(g);
-    buildWorldLayer(id, WORLDS[id].under, g);
-    anchor = g;
-  }
   library.querySelector('[data-n="מנורה"]')?.classList.add('lamp-before');
+  // 17.11: הפסים על גב הספרים נסוגים לרקע יחד עם הספרים (style.css › --book-band-*)
+  for (const tone of ['dark', 'light']) {
+    library.querySelectorAll(`[fill="var(--lib-band-${tone})"]`).forEach((n) => n.setAttribute('fill', `var(--book-band-${tone})`));
+  }
 
   // 2. העולמות מאחורי הדמויות (כולל החוטים של אריאל) — שכבה לכל עולם, כך שהרוח של יעל
   //    או הזרימה של אריאל מציירות מחדש רק את העולם שלהן
-  for (const id of ['A', 'B', 'C']) if (WORLDS[id].back) buildWorldLayer(id, WORLDS[id].back, layer(`world-${id}`));
+  for (const id of ['A', 'B', 'C']) {
+    if (!WORLDS[id].back) continue;
+    const g = layer(`world-${id}`);
+    g.setAttribute('transform', WORLD_MATRIX);
+    buildWorldLayer(id, WORLDS[id].back, g);
+  }
+  // אריאל: החוטים והצמתים ממורכזים על הראש (המספור נשאר)
+  scene.querySelector('[data-part="aThreads"] [data-n="צמתים"]')?.setAttribute('transform', `translate(${THREAD_SHIFT} 0)`);
+  // לינוי: חלקים בקואורדינטות הבמה (המנורה המרחפת והספרים), מאחורי הדמויות
+  for (const id of ['A', 'B', 'C']) if (WORLDS[id].stage) buildWorldLayer(id, WORLDS[id].stage, layer(`world-${id}-stage`));
 
   // 3. גופי הדמויות + החור בראש
   const bodies = layer('bodies');
@@ -369,6 +413,13 @@ function buildScene() {
 
   // 4. השולחן (עם חזית מלאה שמסתירה את הרגליים), 5. ידיים וחפץ
   part('table', layer('table'));
+  // מסך 05: הספר המעופף הימני עף מעל השולחן (מתחת לידיים)
+  const freeBooks = scene.querySelectorAll('[data-part="cBooksFree"] [data-n="ספר מעופף"]');
+  if (freeBooks.length > 1) {
+    const front = el('g', { class: 'world', 'data-w': 'C' }, layer('world-C-front'));
+    worldGroups.C.push(front);
+    front.append(freeBooks[freeBooks.length - 1]);
+  }
   const hands = layer('hands');
   for (const id of ORDER) {
     const g = el('g', { class: 'char', 'data-char': id }, hands);
@@ -395,9 +446,10 @@ function buildFrame() {
   l2.append(CONTENT.headline.line2);
   const strong = document.createElement('strong');
   strong.textContent = CONTENT.headline.line2Strong;
-  l2.append(strong);
+  l2.append(strong, CONTENT.headline.line2End);
   h.replaceChildren(l1, l2);
 
+  // תג שם (389:599): מצב = שם / "מה אני רואה?" (hover וברמז), פעיל = הטקסט בצבע העולם
   const tags = document.getElementById('tags');
   const hit = document.getElementById('hit');
   for (const id of ORDER) {
@@ -405,8 +457,16 @@ function buildFrame() {
     const tag = document.createElement('div');
     tag.className = 'tag';
     tag.style.left = `${CHARACTERS[id].tagX}px`;
-    tag.textContent = name;
+    const nameEl = document.createElement('span');
+    nameEl.className = 'tag-name';
+    nameEl.textContent = name;
+    const ask = document.createElement('span');
+    ask.className = 'tag-ask';
+    ask.textContent = CONTENT.tagAsk;
+    ask.setAttribute('aria-hidden', 'true');
+    tag.append(nameEl, ask);
     tags.append(tag);
+    chars[id].tag = tag;
 
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -426,10 +486,8 @@ function buildFrame() {
       <path d="M5.8 14 H22.1 M22.1 14 L15.1 7 M22.1 14 L15.1 21" fill="none"
         stroke="var(--color-bg-page)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    <span class="bookmark-label"></span>
-    <span class="bookmark-sub"></span>`;
+    <span class="bookmark-label"></span>`;
   bm.querySelector('.bookmark-label').textContent = CONTENT.bookmark.label;
-  bm.querySelector('.bookmark-sub').textContent = CONTENT.bookmark.sub;
 }
 
 /* ===== מצב: מקור אמת אחד. פתיחה, סגירה והחלפה עוברים דרך setActive ===== */
@@ -451,6 +509,11 @@ function setActive(nextId) {
   if (activeId) scatter(units[activeId], revertSpread);
   if (nextId) scatter(units[nextId], spread);
   if (activeId) threads?.leave();
+
+  // אחרי שהמעבר נגמר: hover על דמות בתוך עולם מחליף צבעים מיד (בלי ההשהיה האקראית של ההשתלטות)
+  stage.classList.remove('is-settled');
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(() => stage.classList.add('is-settled'), (opening ? ms('--motion-takeover') + spread : ms('--motion-revert')) + 50);
 
   activeId = nextId;
   if (opening) {
@@ -480,9 +543,11 @@ function setActive(nextId) {
   }
   for (const [id, c] of Object.entries(chars)) {
     for (const g of c.groups) g.classList.toggle('is-active', id === nextId);
+    c.tag.classList.toggle('is-active', id === nextId);
     c.button.setAttribute('aria-pressed', String(id === nextId));
   }
 }
+let settleTimer = 0;
 
 /* ===== hover ===== */
 let hoverId = null;
@@ -497,11 +562,13 @@ function setHover(id) {
   if (id) hoverIntent = setTimeout(() => { hoveredOnce = true; }, ms('--peek-hover-intent'));
   for (const [cid, c] of Object.entries(chars)) {
     for (const g of c.groups) g.classList.toggle('is-hover', cid === id);
+    c.tag.classList.toggle('is-hover', cid === id);
   }
 }
 
-/* ===== רמז לפעולה (עדכון 14.11, מחליף את ה"הצצה") =====
-   כשהעכבר לא זז ואין hover, הדמויות רק גדלות מעט (×1.04) וחוזרות — בלי לפתוח את הראש ובלי מוח.
+/* ===== רמז לפעולה (16.11 / 17.11) =====
+   כשהעכבר לא זז ואין hover, דמות אחת מתרוממת מהדף 4px והצל שלה מעמיק (2,6, טשטוש 10, 22%),
+   ובזמן שהיא למעלה התג שלה מתחלף ל"מה אני רואה?". בלי לפתוח את הראש ובלי מוח.
    סדר קבוע: אריאל, יעל, לינוי, וחוזר חלילה. הראשונה אחרי --motion-peek-first, ואז כל --motion-peek-interval.
    נעצר: hover של חצי שנייה ומעלה; חוזר אחרי --motion-peek-idle בלי תזוזה.
    אחרי הכניסה הראשונה לעולם — מתבטל לגמרי עד רענון הדף. לא רץ ב-prefers-reduced-motion */
@@ -510,14 +577,15 @@ let peekFirst = 0;
 let peekIndex = 0;
 let lastActivity = performance.now();
 function noteActivity() { lastActivity = performance.now(); }
-function clearPeek() { Object.values(chars).forEach((c) => c.groups.forEach((g) => g.classList.remove('is-peek'))); }
+const peekTargets = (c) => [...c.groups, c.tag];
+function clearPeek() { Object.values(chars).forEach((c) => peekTargets(c).forEach((g) => g.classList.remove('is-peek'))); }
 function peekOnce() {
   if (activeId || hoverId) return;
   if (hoveredOnce && performance.now() - lastActivity < ms('--motion-peek-idle')) return;
   const c = chars[HINT_ORDER[peekIndex % HINT_ORDER.length]];
   peekIndex++;
-  c.groups.forEach((g) => g.classList.add('is-peek'));
-  setTimeout(() => c.groups.forEach((g) => g.classList.remove('is-peek')), ms('--motion-hover-open') + ms('--peek-hold'));
+  peekTargets(c).forEach((g) => g.classList.add('is-peek'));
+  setTimeout(() => peekTargets(c).forEach((g) => g.classList.remove('is-peek')), ms('--motion-hint-lift') + ms('--peek-hold'));
 }
 function startPeek() {
   if (reducedMotion) return;
@@ -559,10 +627,10 @@ function playHint(id) {
     lightFlowers(c.x, c.y);
     setTimeout(() => { if (activeId === 'B') lightFlowers(-999, -999); }, 1200);
   } else if (id === 'C') {
-    const c = closestTo(decor.map((d) => d.ref), HINT_CENTER);
+    const c = closestTo(books.map((b) => b.ref), HINT_CENTER);
     if (!c) return;
-    spinDecor(c.x, c.y);
-    setTimeout(() => { if (activeId === 'C') spinDecor(-9999, -9999); }, 700);
+    nearest(books, c.x, c.y, 'orbit');
+    setTimeout(() => { if (activeId === 'C') nearest(books, -999, -999, 'orbit'); }, 1200);
   }
 }
 
@@ -583,7 +651,7 @@ function setupThreads() {
     const t = paths[0].getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)\)/);
     const nums = paths[0].getAttribute('d').match(/-?[\d.]+/g).map(Number);
     const pts = [];
-    for (let i = 0; i + 1 < nums.length; i += 2) pts.push({ x: Number(t[1]) + nums[i], y: Number(t[2]) + nums[i + 1] });
+    for (let i = 0; i + 1 < nums.length; i += 2) pts.push({ x: Number(t[1]) + nums[i] + THREAD_SHIFT, y: Number(t[2]) + nums[i + 1] });
     paths.forEach((p) => p.removeAttribute('transform'));
     // נקודות זרימה: נקודות קטנות ובהירות בתוך החוט האדום (לא מכסות אותו)
     const flow = el('path', { class: 'flow' });
@@ -635,7 +703,8 @@ function setupThreads() {
   const wake = () => { if (!frame) frame = requestAnimationFrame(tick); };
   render();
   threads = {
-    move(x, y) { mouse = { x, y }; wake(); },
+    // x, y בקואורדינטות הבמה; החוטים בקואורדינטות הייצוא (WORLD_MATRIX)
+    move(x, y) { mouse = toWorld(x, y); wake(); },
     leave() { mouse = null; wake(); },
   };
 }
@@ -662,8 +731,9 @@ function setupYael() {
       const x = (m ? m.e : 0) + b.x + b.width / 2;
       const y = (m ? m.f : 0) + b.y + b.height / 2;
       const halo = el('g', { class: 'glow' });
-      el('circle', { cx: x, cy: y, r: 40, fill: 'var(--yael-light)' }, halo);
-      el('circle', { cx: x, cy: y, r: 24, fill: 'var(--yael-light-2)' }, halo);
+      // ההילה גדלה יחד עם הפרח (17.11: "אור פרח" בפיגמה מוגדל באותו יחס)
+      el('circle', { cx: x, cy: y, r: 40 * flowerScale, fill: 'var(--yael-light)' }, halo);
+      el('circle', { cx: x, cy: y, r: 24 * flowerScale, fill: 'var(--yael-light-2)' }, halo);
       back.before(halo);
       glows.push({ el: halo });
     });
@@ -710,24 +780,11 @@ function setupLinoy() {
     book.querySelector('[data-n="מסלול"]')?.classList.add('orbit-path');
     books.push({ el: book, ref: wings, r: 120 });
   });
-}
-
-// לינוי: כוכבים, ספירלות ושמשות — כניסת העכבר לטווח = סיבוב שלם אחד (360°), מצטבר — תמיד קדימה.
-// הסימן ופיסת הנייר שלו באותו <g class="spin"> (CLEANUP.cDecor), כך שהם מסתובבים יחד סביב אותו מרכז
-const DECOR_RADIUS = ms('--linoy-spin-radius');   // 220px
-const decor = [];
-function setupLinoyDecor() {
-  document.querySelectorAll('[data-part="cDecor"] .spin').forEach((g) => decor.push({ ref: g, els: [g] }));
-}
-function spinDecor(x, y) {
-  for (const d of decor) {
-    const c = stageCenter(d.ref);
-    const inside = Math.hypot(c.x - x, c.y - y) < DECOR_RADIUS;
-    if (inside && !d.inside) {
-      d.turns = (d.turns || 0) + 1;
-      for (const e of d.els) e.style.setProperty('--spin', `${d.turns * 360}deg`);
-    }
-    d.inside = inside;
+  // המנורה המרחפת (17.11): התנתקה מהשולחן ומרחפת לאט, כמו הספרים
+  const lamp = document.querySelector('[data-part="cLampFloat"] [data-n="מנורה מרחפת"]');
+  if (lamp) {
+    lamp.classList.add('hover-float');
+    lamp.style.setProperty('--float-dur', '4.5s');
   }
 }
 
@@ -761,14 +818,13 @@ function bindEvents() {
     const { x, y } = stagePoint(event);
     if (activeId === 'A') threads?.move(x, y);
     if (activeId === 'B') lightFlowers(x, y);
-    if (activeId === 'C') { nearest(books, x, y, 'orbit'); spinDecor(x, y); }
+    if (activeId === 'C') nearest(books, x, y, 'orbit');
   });
   stage.addEventListener('pointerleave', () => {
     setHover(null);
     threads?.leave();
     lightFlowers(-999, -999);
     nearest(books, -999, -999, 'orbit');
-    spinDecor(-9999, -9999);
   });
 
   // לחיצה על כל הדמות פותחת את העולם שלה; לחיצה עליה כשהעולם שלה פתוח סוגרת;
@@ -818,7 +874,6 @@ function init() {
   setupThreads();
   setupYael();
   setupLinoy();
-  setupLinoyDecor();
   paperShadows();   // אחרון: הצל הוא עותק של כל צורה, כולל המחלקות שנקבעו בשלבים הקודמים
   getComputedStyle(scene.querySelector('.layer-bodies')).opacity;   // מחשב את המצב ההתחלתי לפני שמחזירים את המעברים
   stage.classList.remove('is-building');

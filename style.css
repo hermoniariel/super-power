@@ -112,7 +112,7 @@
   --tear-crack: 120ms;           /* סדק דק */
   --tear-open: 450ms;            /* הקרע נפתח מהסדק */
   --tear-fold: 300ms;            /* הקפל מתקפל החוצה */
-  --tear-rip: 700ms;             /* לינוי: הקרעים נקרעים מהראש החוצה (17.11: היה 1200) */
+  --tear-rip: 2600ms;            /* לינוי: הקרעים נקרעים מהראש החוצה (19.11: איטי יותר כדי לראות את הקרעים נוצרים; היה 1800, ולפני כן 700) */
   --ease-open: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);   /* קרעים: overshoot קטן */
   --ease-close: cubic-bezier(0.55, 0, 0.75, 0.3);
@@ -327,9 +327,9 @@ html, body {
 /* לינוי (14.11): הקרעים נפתחים מהראש שלה החוצה — עיגול חיתוך שגדל מהראש (clipPath #linoy-rip).
    החשיפה הכללית של העולם נשארת; רק הקרעים נקרעים מהראש. מה שבתוכם (כוכבים, ספרים) מופיע אחרי */
 .rip-circle { r: 0; transition: r var(--revert-each) var(--ease-close); }
-.stage[data-mode="C"] .rip-circle { r: 1250px; transition: r var(--tear-rip) cubic-bezier(.3, .7, .4, 1) calc(var(--motion-takeover-spread) / 3); }
+.stage[data-mode="C"] .rip-circle { r: 1250px; transition: r var(--tear-rip) cubic-bezier(.45, .05, .35, 1) calc(var(--motion-takeover-spread) / 3); } /* 19.11: התחלה רכה, כדי שהקריעה מהראש תיראה */
 .u-rip .tear-inner { opacity: 0; transition: opacity calc(var(--revert-each) / 2) ease-in; }
-.world.is-open .u-rip .tear-inner { opacity: 1; transition: opacity 300ms ease-out calc(var(--tear-rip) * 0.3); }
+.world.is-open .u-rip .tear-inner { opacity: 1; transition: opacity 500ms ease-out calc(var(--tear-rip) * 0.35); }
 .tear-inner { opacity: 0; transition: opacity calc(var(--revert-each) / 2) ease-in var(--d, 0ms); }
 .world.is-open .tear-inner {
   opacity: 1;

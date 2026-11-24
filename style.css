@@ -89,6 +89,8 @@
   /* מראה הקרעים (עמוד 06, ערכים קבועים ב-Figma). -edge-deep ולא -edge: השם -edge כבר תפוס לצבע רצועות הנייר */
   --linoy-tear-center: #213a7a; --linoy-tear-mid: #0f214c; --linoy-tear-edge-deep: #08102a; --linoy-tear-rim: #f8f3ea;
   --linoy-tear-inner: rgba(3, 5, 20, .75); --linoy-tear-drop: rgba(13, 20, 64, .18);
+  /* לבן נייר (24.11): השכבה הלבנה 12% שמבהירה את החלל בקרעים, ושולי מדבקת הפרח של יעל — לבן בפיגמה, בלי משתנה */
+  --paper-white: #ffffff;
 
   /* פונטים: החלפת פונט היא שינוי של שורה אחת כאן (ושל הקישור ב-index.html) */
   --font-display: "Rubik", sans-serif;
@@ -102,6 +104,8 @@
   --hint-lift: -4px;             /* רמז: הדמות מתרוממת 4px */
   --hint-shadow: drop-shadow(2px 6px 10px rgba(0, 0, 0, .22));   /* רמז: הצל מעמיק */
   --tag-scale-hover: 1.15;       /* hover: התג גדל מהמרכז התחתון */
+  --tag-power-w: 232px;          /* תג שם, מצב "כוח" (422:587): פאה עליונה 10 + חזית 84 */
+  --tag-power-h: 94px;
   --peek-hover-intent: 500ms;    /* hover קצר מזה לא נחשב אינטראקציה */
   --motion-peek-idle: 6000ms;    /* אחרי אינטראקציה: ההצצה חוזרת רק אחרי כך וכך בלי תזוזה */
   --char-scale-hover: 1.04;      /* hover: הדמות גדלה */
@@ -527,9 +531,11 @@ html, body {
 }
 
 /* ===== מסגור ===== */
+/* 24.11: הכותרת ירדה 17px (59 → 76, כמו בפריימים): המרווח מקצה הבמה לראש האותיות שווה למרווח
+   מתחתית האותיות לראש הארון (כ-80px כל אחד). הבמה כולה מוגדלת אחיד, אז היחס נשמר בכל גודל חלון */
 .headline {
   position: absolute;
-  top: 59px;
+  top: 76px;
   left: 170px;
   width: 1100px;
   margin: 0;
@@ -539,8 +545,7 @@ html, body {
   line-height: 1.18;
   pointer-events: none;
 }
-/* מסך 35:3: שורה עליונה קטנה, "אנחנו רואות מה שמתחת." גדולה ומודגשת */
-/* רכיב "כותרת" (389:23230): שורה 1 SemiBold 30, שורה 2 Medium 56 עם "ראש פתוח" ב-SemiBold. -1.5%, 118% */
+/* רכיב "כותרת" (389:23230): שורה 1 SemiBold 30, שורה 2 Medium 56 עם "הכוח לראות אחרת" ב-SemiBold. -1.5%, 118% */
 .headline .line1 {
   display: block;
   font-size: 30px;
@@ -553,7 +558,8 @@ html, body {
   font-weight: 500;
   letter-spacing: -0.015em;
 }
-/* "ראש פתוח": ב"לפני" בצבע הטקסט, בעולם בצבע העולם (אותו משתנה של הסימנייה) — באותו תזמון כמו צביעת העולם */
+/* "הכוח לראות אחרת": ב"לפני" בצבע הטקסט, בעולם בצבע העולם (אותו משתנה של הסימנייה) — באותו תזמון כמו צביעת העולם.
+   הנקודה בסוף מחוץ ל-strong ונשארת ניטרלית */
 .headline .line2 strong {
   font-weight: 600;
   color: var(--color-text-primary);
@@ -572,56 +578,78 @@ html, body {
   background: var(--obj-page);
   /* צל גזירי נייר (14.11) */
   filter: var(--paper-cut-css);
-  display: grid;
-  place-items: center;
   font-family: var(--font-display);
   font-weight: 500;
   color: var(--color-text-primary);
   /* hover: התג גדל ×1.15 מהמרכז התחתון שלו (רוחב קבוע 136) */
   transform-origin: 50% 100%;
+  /* מצב "כוח" (24.11): התג גדל ל-232×94 — ממורכז מתחת לדמות, הפאה העליונה נשארת על השולחן והוא גדל כלפי מטה.
+     באותו easing ומשך של שאר המעברים (ההשתלטות / החזרה) */
   transition:
     border-color var(--paint-dur) var(--paint-ease),
     background-color var(--paint-dur) var(--paint-ease),
     color var(--paint-dur) var(--paint-ease),
+    width var(--paint-dur) var(--paint-ease),
+    height var(--paint-dur) var(--paint-ease),
+    margin-left var(--paint-dur) var(--paint-ease),
     scale var(--motion-hover-open) ease-out;
 }
-.tag.is-hover { scale: var(--tag-scale-hover); }
-/* פעיל (בעולם שלה): הטקסט בצבע העולם — אותו משתנה של הסימנייה ושל "ראש פתוח" */
-.tag.is-active { color: var(--world-highlight); }
-/* שם / "מה אני רואה?": אותו תא, מעבר טקסט קצר. 21px → ×1.15 = 24px בתג המוגדל, בלי לגעת בשוליים */
-.tag-name, .tag-ask {
-  grid-area: 1 / 1;
-  white-space: nowrap;
-  transition: opacity var(--motion-tag-swap) ease-out;
-}
-.tag-name { font-size: 24px; }
-.tag-ask { font-size: 21px; opacity: 0; }
-.tag:is(.is-hover, .is-peek) .tag-name { opacity: 0; }
-.tag:is(.is-hover, .is-peek) .tag-ask { opacity: 1; }
+.tag.is-hover:not(.is-active) { scale: var(--tag-scale-hover); }
+.tag.is-active { width: var(--tag-power-w); height: var(--tag-power-h); margin-left: calc((136px - var(--tag-power-w)) / 2); }
 
-/* שם הכוח: גדול במרכז, נחשף רק בעולם */
-.power {
+/* תוכן התג: שלוש שורות באותו מקום, כל אחת נכנסת ויוצאת במעבר קצר.
+   שם / "מה אני רואה?": 21px → ×1.15 = 24px בתג המוגדל, בלי לגעת בשוליים.
+   מצב "כוח": שם הדמות Medium 18 ניטרלי (y 22–48), שם הכוח SemiBold 28 בצבע העולם (y 50–86) — כמו ברכיב 422:587 */
+.tag-name, .tag-ask, .tag-power {
   position: absolute;
-  top: 938px;
-  left: 320px;
-  width: 800px;
-  height: 24px;
-  margin: 0;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-note);
-  font-size: 40px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  white-space: nowrap;
+}
+.tag-name {
+  top: 0;
+  height: 48px;
+  line-height: 48px;
+  font-size: 24px;
+  transition:
+    opacity var(--motion-tag-swap) ease-out,
+    top var(--paint-dur) var(--paint-ease),
+    height var(--paint-dur) var(--paint-ease),
+    line-height var(--paint-dur) var(--paint-ease),
+    font-size var(--paint-dur) var(--paint-ease);
+}
+.tag-ask { top: 0; height: 48px; line-height: 48px; font-size: 21px; opacity: 0; transition: opacity var(--motion-tag-swap) ease-out; }
+.tag-power {
+  top: 40px;
+  height: 36px;
+  line-height: 36px;
+  font-size: 28px;
   font-weight: 600;
-  line-height: 24px;
   color: var(--world-highlight);
   opacity: 0;
   transition: opacity var(--revert-each) var(--ease-close);
-  pointer-events: none;
 }
-.stage.has-world .power {
+.tag:is(.is-hover, .is-peek):not(.is-active) .tag-name { opacity: 0; }
+.tag:is(.is-hover, .is-peek):not(.is-active) .tag-ask { opacity: 1; }
+.tag.is-active .tag-name { top: 12px; height: 26px; line-height: 26px; font-size: 18px; }
+.tag.is-active .tag-power {
   opacity: 1;
   transition: opacity var(--motion-takeover) var(--ease-open) calc(var(--motion-takeover-spread) / 2);
 }
+
+/* לינוי (24.11): חמשת הספרים שעפו מהמדפים לא מוצגים בעולם שלה (במקומם שקע מוצל, cTaken).
+   נעלמים במקום, בהשהיה האקראית של כל צורה; גם הצל שלהם */
+.p.book-taken, .pc.book-taken {
+  transition:
+    fill var(--paint-dur) var(--paint-ease) var(--d, 0ms),
+    stroke var(--paint-dur) var(--paint-ease) var(--d, 0ms),
+    opacity var(--paint-dur) var(--paint-ease) var(--d, 0ms);
+}
+.stage[data-mode="C"] .book-taken { opacity: 0; }
+
+/* יעל (24.11): המילה על התגית — Playpen Medium 16, בצבע הענף (מ-content.js) */
+.yael-tag-text { font-family: var(--font-note); font-weight: 500; direction: rtl; }
 
 /* ===== סימנייה · חזרה (רכיב 170:729) =====
    סרט 88px תלוי מקצה המסך, חיתוך V בתחתית, קצה כהה למעלה, תפר, חץ ←, "חזרה / לספרייה" */

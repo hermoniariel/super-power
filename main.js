@@ -8,7 +8,8 @@
    'חוט NN' חוט של אריאל ('רצועת נייר' + 'חוט', קו שבור דרך הצמתים) · 'צומת NN' צומת · 'מספור מדפים'
    'מגירת קטלוג' · 'חלון אור' · 'ענף N' · 'לב פרח' · 'הילת מנורה' · 'מנורת צבעוני'
    'לינוי · קרעים' ('שפת נייר קרועה' + 'חלל' + 'כוכבים' + 'ספר מעופף') · 'ספר מעופף' ('ספר-ציפור' + 'מסלול')
-   'לינוי · מנורה מרחפת' (17.11, במקום השעון הנמס) */
+   'לינוי · מנורה מרחפת' (17.11, במקום השעון הנמס) · 'ספרים שנלקחו · הצללה' / 'לינוי · צל מנורה' (24.11)
+   'יעל · תגית' · 'יעל · פרח מיובש בספר' · 'יעל · פרח מצויר במחברת של לינוי' · 'יעל · מדבקת פרח על המחשב של אריאל' (24.11) */
 
 const F = window.FIGMA;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -54,17 +55,29 @@ const WORLDS = {
   },
   C: {
     // 17.11: בלי שעון נמס ובלי כוכבים/ספירלות/שמשות. הקרעים חושפים חלל, ומהם עפים ספרים.
-    // הארון התחתון: שלם, בלי קרעים, כמו בפיגמה
-    back: [
-      { part: 'cTearsNew', units: [[':scope', 'rip']] },
-    ],
-    // בקואורדינטות הבמה (לא בתוך הספרייה): המנורה המרחפת ושני הספרים שמחוץ לקרעים (מסך 05)
+    // הארון התחתון: שלם, בלי קרעים, כמו בפיגמה.
+    // 24.11: הכול בקואורדינטות הבמה (יוצא מחדש מהפריים 05): הקו המקווקוו סביב הספרים שנלקחו (מתחת לקרעים),
+    // הקרעים, המנורה המרחפת ושני הספרים שמחוץ לקרעים
     stage: [
+      { part: 'cTaken', units: [['[data-n="ספר שנלקח · מתאר"]', 'fade']] },
+      { part: 'cTearsNew', units: [[':scope', 'rip']] },
       { part: 'cLampFloat', units: [[':scope', 'pop']] },
       { part: 'cBooksFree', units: [['[data-n="ספר מעופף"]', 'pop']] },
     ],
   },
 };
+
+/* לינוי (24.11): חמשת הספרים שעפו מהמדפים — בעולם שלה הם לא מוצגים, ובמקומם קו מתאר מקווקוו ורוד,
+   אותו קו כמו המסלול של הספר המעופף (cTaken). המקומות בקואורדינטות הבמה
+   (rect של "ספר שנלקח · מתאר" ב-343:7268 + 79). כל צורה בספרייה שיושבת
+   כולה בתוך אחד מהם (הספר והפסים שעליו) מקבלת .book-taken ונעלמת רק בעולם של לינוי */
+const TAKEN_BOOKS = [[641, 279, 42, 88], [1069, 414, 32, 73], [408, 417, 20, 70], [1120, 294, 26, 73], [557, 525, 20, 82]];
+
+/* יעל (24.11): הרבדים הנסתרים. בלי הסבר ובלי אינטראקציה — מתגלים למי שמסתכלת.
+   התגיות יושבות על הענפים וזזות איתם ברוח: כל תגית נכנסת לענף שהחוט שלה יוצא ממנו (לפי הפריים 04).
+   הפרח המיובש, השרבוט והמדבקה יושבים על החפצים, בתוך שכבת הידיים של כל דמות (כדי שיגדלו איתה ב-hover) */
+const YAEL_TAG_BRANCH = [5, 2, 4];   // סקרנות, חמלה, דמיון → ענף N (נבדק בדפדפן: החוט יוצא מהגבעול שלו)
+const YAEL_ON_OBJECTS = [['bDried', 'B'], ['bDoodle', 'C'], ['bSticker', 'A']];
 
 /* ===== פריסת הספרייה (17.11, מסכי "ראש פתוח" בעמוד 05) =====
    החלקים ב-figma-parts.js יוצאו בפריסה הישנה: סקייל 1.06 סביב (720,176) והזזה של 44px.
@@ -104,8 +117,8 @@ const SCENE_DEFS = `
     <feComposite in2="SourceAlpha" operator="in" result="shade"/>
     <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shade"/></feMerge>
   </filter>
-  <!-- הקרעים של לינוי נפתחים מהראש שלה החוצה (main.js › markUnit 'rip') -->
-  <clipPath id="linoy-rip"><circle class="rip-circle" cx="249" cy="590"/></clipPath>`;
+  <!-- הקרעים של לינוי נפתחים מהראש שלה החוצה (main.js › markUnit 'rip'). קואורדינטות הבמה (24.11) -->
+  <clipPath id="linoy-rip"><circle class="rip-circle" cx="276" cy="604"/></clipPath>`;
 
 /* ===== בנייה ===== */
 function el(tag, attrs = {}, parent) {
@@ -153,29 +166,7 @@ function placeTexts(key, root) {
 // הספרייה בקואורדינטות הייצוא שמכסות את כל הבמה (אחרי WORLD_MATRIX): 0..1440 × 0..1024 ועוד שוליים
 const WORLD_COVER = { x0: -60, x1: 1500, y0: -60, y1: 1140 };
 const CLEANUP = {
-  // לינוי (17.11): ברכיב "לינוי · קרעים" (343:7268) כבר אין את הקרעים הקטנים ברקע.
-  // הייצוא הישן מכיל 6 תת-צורות נוספות בשפת הנייר ובחלל — משאירים רק את מה שיש בפיגמה (TEAR_SHAPES)
-  cTearsNew: (root) => {
-    for (const name of ['שפת נייר קרועה', 'חלל']) {
-      const path = root.querySelector(`[data-n="${name}"] path`);
-      const [tx, ty] = path.closest('[transform]').getAttribute('transform').match(/[-\d.]+/g).map(Number);
-      const keep = path.getAttribute('d').split(/(?=M)/).filter((sub) => {
-        const probe = el('path', { d: sub }, path.parentNode);
-        const b = probe.getBBox();
-        probe.remove();
-        const box = [b.x + tx, b.y + ty, b.x + b.width + tx, b.y + b.height + ty];
-        return TEAR_SHAPES[name].some((f) => f.every((v, i) => Math.abs(v - box[i]) <= 3));
-      });
-      path.setAttribute('d', keep.join(''));
-    }
-  },
   ...Object.fromEntries([1, 2, 3, 4, 5].map((i) => [`bBranch${i}`, resizeFlowers])),
-};
-
-// הצורות שיש היום ברכיב "לינוי · קרעים" (fillGeometry של 343:7269 / 343:7314), בקואורדינטות הייצוא
-const TEAR_SHAPES = {
-  'שפת נייר קרועה': [[272, 287, 1346, 656], [68, 240, 1057, 621], [606, 459, 610, 460], [596, 458, 602, 459], [1014, 367, 1017, 369]],
-  'חלל': [[274, 291, 1340, 652], [74, 411, 231, 617], [182, 245, 1056, 615], [582, 454, 583, 455], [233, 401, 247, 419]],
 };
 
 /* יעל (17.11): הפרחים בפיגמה (מסך 04, 392:8479) גדולים פי ~1.53 מהייצוא, וכל פרח זז מעט כדי להישאר בקצה הענף.
@@ -348,6 +339,41 @@ function paperShadows() {
   return count;
 }
 
+/* לינוי: הספרים שנלקחו (TAKEN_BOOKS). המיקום נמדד על המסך, בקואורדינטות הבמה (הספרייה עם WORLD_MATRIX) */
+function markTakenBooks(library) {
+  const toStage = scene.getScreenCTM().inverse();
+  library.querySelectorAll('[data-n="ארון"] :is(path, rect)').forEach((n) => {
+    const b = n.getBBox();
+    const m = toStage.multiply(n.getScreenCTM());
+    const pts = [[b.x, b.y], [b.x + b.width, b.y + b.height]].map(([x, y]) => ({ x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f }));
+    const box = [Math.min(pts[0].x, pts[1].x), Math.min(pts[0].y, pts[1].y), Math.max(pts[0].x, pts[1].x), Math.max(pts[0].y, pts[1].y)];
+    const inside = TAKEN_BOOKS.some(([x, y, w, h]) => box[0] >= x - 1.5 && box[1] >= y - 1.5 && box[2] <= x + w + 1.5 && box[3] <= y + h + 1.5);
+    if (inside) n.classList.add('book-taken');
+  });
+}
+
+/* יעל: התגיות (בקואורדינטות הבמה) נכנסות לענף שלהן, שהוא בקואורדינטות הייצוא — עם המטריצה ההפוכה של WORLD_MATRIX.
+   הן נפתחות כשהענף כמעט סיים לצמוח, כמו העלים והפרחים בקצוות */
+const WORLD_INVERSE = `matrix(${1 / WORLD_K} 0 0 ${1 / WORLD_K} ${-WORLD_E / WORLD_K} ${-WORLD_F / WORLD_K})`;
+function placeYaelTags() {
+  const holder = el('g');
+  holder.innerHTML = F.parts.bTags;
+  holder.querySelectorAll('text[data-word]').forEach((t) => {
+    t.textContent = CONTENT.worlds.B.tags[Number(t.dataset.word)];
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'central');
+    t.classList.add('yael-tag-text');
+  });
+  [...holder.firstElementChild.children].forEach((tag, i) => {
+    const branch = scene.querySelector(`[data-part="bBranch${YAEL_TAG_BRANCH[i]}"] > g`);
+    if (!branch) return;
+    const g = el('g', { 'data-part': 'bTag', transform: WORLD_INVERSE }, branch);
+    g.append(tag);
+    tag.classList.add('after');
+    tag.style.setProperty('--reach', '0.9');
+  });
+}
+
 const chars = {};  // id -> { groups: [body, hands], brain, button }
 
 function buildScene() {
@@ -372,6 +398,7 @@ function buildScene() {
   for (const tone of ['dark', 'light']) {
     library.querySelectorAll(`[fill="var(--lib-band-${tone})"]`).forEach((n) => n.setAttribute('fill', `var(--book-band-${tone})`));
   }
+  markTakenBooks(library);
 
   // 2. העולמות מאחורי הדמויות (כולל החוטים של אריאל) — שכבה לכל עולם, כך שהרוח של יעל
   //    או הזרימה של אריאל מציירות מחדש רק את העולם שלהן
@@ -413,13 +440,10 @@ function buildScene() {
 
   // 4. השולחן (עם חזית מלאה שמסתירה את הרגליים), 5. ידיים וחפץ
   part('table', layer('table'));
-  // מסך 05: הספר המעופף הימני עף מעל השולחן (מתחת לידיים)
+  // מסך 05: צל המנורה המרחפת נשאר על השולחן (לא זז עם הריחוף), והספר המעופף הימני עף מעל השולחן (מתחת לידיים)
+  const front = buildWorldLayer('C', [{ part: 'cLampShadow', units: [[':scope', 'fade']] }], layer('world-C-front'));
   const freeBooks = scene.querySelectorAll('[data-part="cBooksFree"] [data-n="ספר מעופף"]');
-  if (freeBooks.length > 1) {
-    const front = el('g', { class: 'world', 'data-w': 'C' }, layer('world-C-front'));
-    worldGroups.C.push(front);
-    front.append(freeBooks[freeBooks.length - 1]);
-  }
+  if (freeBooks.length > 1) front.append(freeBooks[freeBooks.length - 1]);
   const hands = layer('hands');
   for (const id of ORDER) {
     const g = el('g', { class: 'char', 'data-char': id }, hands);
@@ -427,6 +451,9 @@ function buildScene() {
     part(CHARACTERS[id].hands, g);
     chars[id].groups.push(g);
   }
+  // יעל: פרח מיובש בספר שלה, שרבוט במחברת של לינוי, מדבקה על המחשב של אריאל
+  for (const [key, owner] of YAEL_ON_OBJECTS) buildWorldLayer('B', [{ part: key, units: [[':scope', 'pop']] }], chars[owner].groups[1]);
+  placeYaelTags();
 
   // אפקטי העומק הישנים (עמוד 06) מסומנים בייצוא של הדמויות — לא בשימוש יותר
   scene.querySelectorAll('[data-fxs]').forEach((n) => n.removeAttribute('data-fxs'));
@@ -449,11 +476,12 @@ function buildFrame() {
   l2.append(strong, CONTENT.headline.line2End);
   h.replaceChildren(l1, l2);
 
-  // תג שם (389:599): מצב = שם / "מה אני רואה?" (hover וברמז), פעיל = הטקסט בצבע העולם
+  // תג שם (389:599): מצב = שם / "מה אני רואה?" (hover וברמז) / "כוח" (422:587: בעלת העולם —
+  // שם הדמות למעלה ושם הכוח בצבע העולם למטה, התג גדל ל-232×94 כלפי מטה)
   const tags = document.getElementById('tags');
   const hit = document.getElementById('hit');
   for (const id of ORDER) {
-    const name = CONTENT.characters[id].name;
+    const { name, power } = CONTENT.characters[id];
     const tag = document.createElement('div');
     tag.className = 'tag';
     tag.style.left = `${CHARACTERS[id].tagX}px`;
@@ -464,7 +492,10 @@ function buildFrame() {
     ask.className = 'tag-ask';
     ask.textContent = CONTENT.tagAsk;
     ask.setAttribute('aria-hidden', 'true');
-    tag.append(nameEl, ask);
+    const powerEl = document.createElement('span');
+    powerEl.className = 'tag-power';
+    powerEl.textContent = power;
+    tag.append(nameEl, ask, powerEl);
     tags.append(tag);
     chars[id].tag = tag;
 
@@ -519,7 +550,6 @@ function setActive(nextId) {
   if (opening) {
     stage.dataset.mode = nextId;
     scheduleHint(nextId);
-    document.getElementById('power').textContent = CONTENT.characters[nextId].power;
     stopPeek();   // אחרי הכניסה הראשונה לעולם — הרמז מתבטל לגמרי עד רענון הדף
   } else {
     delete stage.dataset.mode;
@@ -731,9 +761,14 @@ function setupYael() {
       const x = (m ? m.e : 0) + b.x + b.width / 2;
       const y = (m ? m.f : 0) + b.y + b.height / 2;
       const halo = el('g', { class: 'glow' });
-      // ההילה גדלה יחד עם הפרח (17.11: "אור פרח" בפיגמה מוגדל באותו יחס)
-      el('circle', { cx: x, cy: y, r: 40 * flowerScale, fill: 'var(--yael-light)' }, halo);
-      el('circle', { cx: x, cy: y, r: 24 * flowerScale, fill: 'var(--yael-light-2)' }, halo);
+      // ההילה גדלה יחד עם הפרח (17.11: "אור פרח" בפיגמה מוגדל באותו יחס).
+      // 24.11: לכל אחד משני העיגולים צל גזירי נייר משלו ("צל עדין גזירי נייר" ב-89:550) — אותו עותק בשחור 25%
+      // מוזז 1px כמו ב-paperShadows, בתוך ההילה, כך שהוא גדל וזז יחד עם העיגול
+      for (const [r, fill] of [[40, 'var(--yael-light)'], [24, 'var(--yael-light-2)']]) {
+        const attrs = { cx: x, cy: y, r: r * flowerScale };
+        el('circle', { ...attrs, cx: x + 1, class: 'pc', style: 'fill: var(--paper-cut)' }, halo);
+        el('circle', { ...attrs, fill }, halo);
+      }
       back.before(halo);
       glows.push({ el: halo });
     });
